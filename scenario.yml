@@ -1,0 +1,35 @@
+---
+- name: Create ssh key
+  import_playbook: playbooks/create-sshkey.yml
+- name: Start docker
+  import_playbook: playbooks/start-docker.yml
+- name: Install RootAsRole
+  hosts: docker
+  connection: ssh
+  become: false
+  roles:
+    - rootasrole
+  vars:
+    command: "install"
+  ignore_errors: true
+- name: Install Apache2
+  import_playbook: scenario_sr_paper.yml
+- name: Test Apache2
+  connection: local
+  hosts: localhost
+  tasks:
+    - name: Test Apache2
+      ansible.builtin.uri:
+        url: "http://{{ ansible_host }}/index.html"
+        status_code: 200
+  ignore_errors: true
+- name: Destroy docker
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Stop docker
+      ansible.builtin.shell: docker stop $(docker ps -a -q)
+      when: "keep_docker != true"
+    - name: Remove docker
+      ansible.builtin.shell: docker rm $(docker ps -a -q)
+      when: "keep_docker != true"

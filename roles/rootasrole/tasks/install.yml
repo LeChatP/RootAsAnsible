@@ -1,0 +1,44 @@
+---
+- name: Clone RootAsRole repository
+  git:
+    repo: 'https://github.com/LeChatP/RootAsRole.git'
+    dest: '/tmp/RootAsRole'
+    clone: true
+    update: true
+
+- name: Install Dependencies script
+  ansible.builtin.shell:
+    cmd: './dependencies.sh -yd'
+    chdir: '/tmp/RootAsRole'
+  register: deps
+  timeout: 600
+
+- name: Run configuration script
+  ansible.builtin.shell:
+    cmd: 'yes | ./configure.sh -yd'
+    chdir: '/tmp/RootAsRole'
+  become: true
+  become_method: sudo
+  ignore_errors: true
+  register: configure
+  timeout: 300
+
+- name: exit if configure failed
+  fail:
+    msg: "Configure failed"
+  when: configure.rc != 0
+
+- name: Install RootAsRole
+  ansible.builtin.shell:
+    cmd: 'make install'
+    chdir: '/tmp/RootAsRole'
+  become: false
+  timeout: 600
+
+- name: cat /etc/security/rootasrole.json
+  ansible.builtin.shell:
+    cmd: 'cat /etc/security/rootasrole.json'
+  register: rootasrole
+  become: true
+  become_method: sudo
+  changed_when: false

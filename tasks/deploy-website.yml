@@ -1,0 +1,7 @@
+---
+- name: Copy HTML template file
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: /path/to/destination/index.html
+  vars:
+        item: '{{ lookup("first_found", dict(files=["../templates/index-template.html.j2"], skip=True)) }}'

@@ -1,0 +1,30 @@
+---
+- name: Install RootAsRole
+  include_tasks: install.yml
+  when: command == 'install'
+
+- name: List Roles/Tasks/Actors in RootAsRole
+  include_tasks: list.yml
+  when: command == 'list'
+
+- name: Create new role
+  include_tasks: role.yml
+  when: command == 'newrole'
+
+- name: Add Task to Role
+  include_tasks: task.yml
+  when: command == 'task'
+
+- name: Assign Actor to Role
+  include_tasks: grant.yml
+  when: command == 'grant'
+
+- name: Remove Actor from Role
+  include_tasks: revoke.yml
+  when: command == 'revoke'
+
+- name: Option edition
+  include_tasks: option.yml
+  when: command == 'option'
+
+

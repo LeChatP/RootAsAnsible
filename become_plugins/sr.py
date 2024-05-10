@@ -1,0 +1,111 @@
+# -*- coding: utf-8 -*-
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+from __future__ import annotations
+
+DOCUMENTATION = """
+    name: sr
+    short_description: Substitute Role
+    description:
+        - This become plugin allows your remote/login user to execute commands using configured roles.
+    author: Eddie Billoir
+    version_added: "2.8"
+    options:
+        become_exe:
+            description: sr executable
+            default: sr
+            ini:
+              - section: privilege_escalation
+                key: become_exe
+              - section: sr_become_plugin
+                key: executable
+            vars:
+              - name: ansible_become_exe
+              - name: ansible_sr_exe
+            env:
+              - name: ANSIBLE_BECOME_EXE
+              - name: ANSIBLE_SR_EXE
+            keyword:
+              - name: become_exe
+        become_role:
+            description: Role to use
+            default: ''
+            ini:
+              - section: privilege_escalation
+                key: become_role
+              - section: sr_become_plugin
+                key: role
+              - section: sr_become_plugin
+                key: task
+            vars:
+              - name: ansible_become_role
+              - name: ansible_sr_role
+            env:
+              - name: ANSIBLE_BECOME_ROLE
+              - name: ANSIBLE_SR_ROLE
+            keyword:
+              - name: become_role
+        become_flags:
+            description: Options to pass to sr
+            default: ''
+            ini:
+              - section: privilege_escalation
+                key: become_flags
+              - section: sr_become_plugin
+                key: flags
+            vars:
+              - name: ansible_become_flags
+              - name: ansible_sr_flags
+            env:
+              - name: ANSIBLE_BECOME_FLAGS
+              - name: ANSIBLE_SR_FLAGS
+            keyword:
+              - name: become_flags
+        become_pass:
+            description: Password to pass to sr
+            required: True
+            vars:
+              - name: ansible_become_password
+              - name: ansible_become_pass
+              - name: ansible_sr_pass
+            env:
+              - name: ANSIBLE_BECOME_PASS
+              - name: ANSIBLE_SR_PASS
+            ini:
+              - section: sr_become_plugin
+                key: password
+"""
+
+import re
+import shlex
+
+from ansible.plugins.become import BecomeBase
+
+
+class BecomeModule(BecomeBase):
+
+    name = 'sr'
+
+    # messages for detecting prompted password issues
+    fail = ('Permission denied')
+    missing = ('Permission denied')
+
+    def build_become_command(self, cmd, shell):
+        super(BecomeModule, self).build_become_command(cmd, shell)
+
+        self.prompt = "Password:"
+
+        if not cmd:
+            return cmd
+
+        becomecmd = self.get_option('become_exe') or self.name
+
+        role = ''
+
+        if self.get_option('become_role'):
+            role = '-r {}' % self.get_option('become_role')
+        
+        if self.get_option('become_task'):
+            role = '-t {}' % self.get_option('become_task')
+
+        flags = self.get_option('become_flags') or ''
+        return ' '.join([becomecmd, flags, role, self._build_success_command(cmd, shell)])

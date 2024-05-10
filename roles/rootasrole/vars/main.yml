@@ -1,0 +1,3 @@
+---
+# vars file for rootasrole
+config_file_path: /etc/security/rootasrole.yml

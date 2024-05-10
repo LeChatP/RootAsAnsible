@@ -1,0 +1,62 @@
+---
+- name: Ansible Playbook to Install and Setup Apache on Ubuntu
+  become: true
+  become_method: sr
+  become_flags: "-r deploy_apache"
+  hosts: webserver
+  tasks:
+    - name: Use latest version of Apache
+      ansible.builtin.apt:
+        name: apache2
+        update_cache: true
+        state: present
+
+    - name: Create document root for domain configured in host variable
+      ansible.builtin.file:
+        path: "/var/www/{{ http_host }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: '0755'
+
+    - name: Deploy website source code
+      ansible.builtin.import_playbook:
+        playbook: deploy-website.yml
+
+    - name: Set up virtualHost
+      ansible.builtin.template:
+        src: "{{ item }}"
+        dest: "/etc/apache2/sites-available/{{ http_conf }}"
+        owner: www-data
+        group: www-data
+        mode: '0644'
+      vars:
+        item: '{{ lookup("first_found", dict(files=["templates/apache-template.conf.j2"], skip=True)) }}'
+
+    # Check if the Apache site is already enabled
+    - name: Check if the Apache site is enabled
+      ansible.builtin.stat:
+        path: "/etc/apache2/sites-enabled/{{ http_conf }}"
+      register: site_enabled
+
+    # Enable the site if it is not enabled
+    - name: Enable Apache site
+      ansible.builtin.command: a2ensite {{ http_conf }}
+      when: not site_enabled.stat.exists
+      changed_when: site_enabled.stat.exists
+      notify: restart-apache
+      become: true
+
+    - name: Open port 80
+      ansible.builtin.include_role:
+        name: mallory.net_input
+      vars:
+        net_input_protocol: tcp
+        net_input_port: 80
+        net_input_state: accepting
+
+  handlers:
+    - name: Restart-apache
+      ansible.builtin.service:
+        name: apache2
+        state: restarted

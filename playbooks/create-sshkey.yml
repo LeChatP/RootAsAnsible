@@ -1,0 +1,24 @@
+---
+- name: Create SSH key
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Generate SSH key
+      community.crypto.openssh_keypair:
+        path: "{{ ssh_key_path }}"
+        size: "2048"
+      notify:
+        - Set permissions on private key
+        - Set permissions on public key
+  handlers:
+    - name: Set permissions on private key
+      ansible.builtin.file:
+        path: "{{ ssh_key_path }}"
+        mode: "0600"
+        owner: "root"
+    - name: Set permissions on public key
+      ansible.builtin.file:
+        path: "{{ ssh_key_path }}.pub"
+        mode: "0644"
+        owner: "root"

@@ -1,0 +1,10 @@
+---
+# tasks file for net_input
+- name: Set iptables rule for specified port and protocol
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: "{{ net_input_protocol }}"
+    port: "{{ net_input_port }}"
+    jump: "{{ 'ACCEPT' if net_input_state == 'accepting' else 'DROP' }}"
+    state: present
+  become: true

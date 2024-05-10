@@ -1,0 +1,8 @@
+---
+- name: Create new role
+  ansible.builtin.command: 'chsr newrole {{ role_name }}'
+  register: newrole
+  changed_when: newrole.rc == 0
+  failed_when: newrole.rc != 0
+  ignore_errors: true
+  tags: ['newrole']

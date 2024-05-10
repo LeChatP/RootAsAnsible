@@ -1,0 +1,4 @@
+---
+- name: Run capable command
+  command: capable -j {{ command }}
+  register: capable_output

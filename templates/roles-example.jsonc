@@ -1,0 +1,122 @@
+{
+    "version": "3.0.0-alpha.4",
+    "storage": {
+        "method": "json",
+        "settings": {
+            "immutable": true,
+            "path": "/etc/security/rootasrole.json"
+        }
+    },
+    "options": {
+        // [...]
+    },
+    "roles": [
+        {
+            "name": "deploy_apache",
+            "actors": [
+                {
+                    "type": "user",
+                    "name": "ansible"
+                }
+            ],
+            "tasks": [
+                {
+                    "name": "install_apache2",
+                    "purpose": "Install latest version of Apache",
+                    "cred": {
+                        // apache needs root to create files in root-owned directories
+                        "setuid": "root", 
+                        "setgid": "root",
+                        "capabilities": {
+                            "default": "none",
+                            "add": [
+                                "CAP_NET_BIND_SERVICE"
+                            ] // apache needs to bind to port http
+                        }
+                    },
+                    "commands": {
+                        // Ansible wraps the command in a script file in /tmp
+                        "default": "all" 
+                    }
+                },
+                {
+                    "name": "deploy_website",
+                    "purpose": "Deploy website source code",
+                    "cred": {
+                        // apache needs to write to /var/www/html
+                        "setuid": "www-data",
+                        "setgid": "www-data",
+                        "capabilities": {
+                            "default": "none"
+                        }
+                    },
+                    "commands": {
+                        "default": "all"
+                    }
+                },
+                {
+                    "name": "setup_virtualhost",
+                    "purpose": "Set up virtualHost",
+                    "cred": { // apache needs root to write to /etc/apache2/sites-available
+                        "setuid": "root",
+                        "setgid": "root",
+                        "capabilities": { // no additional capabilities needed
+                            "default": "none"
+                        }
+                    },
+                    "commands": {
+                        "default": "all"
+                    }
+                },
+                {
+                    "name": "Enable site",
+                    "purpose": "Enable virtualHost",
+                    "cred": { // apache needs root to make symlink to /etc/apache2/sites-enabled
+                        "setuid": "root",
+                        "setgid": "root",
+                        "capabilities": { // no additional capabilities needed
+                            "default": "none"
+                        }
+                    },
+                    "commands": {
+                        "default": "all"
+                    }
+                },
+                {
+                    "name": "restart_apache",
+                    "purpose": "Reload Apache to apply changes",
+                    "cred": {
+                        "setuid": "root",
+                        "setgid": "root",
+                        "capabilities": {
+                            "default": "none",
+                            "add": [
+                                "CAP_NET_BIND_SERVICE"
+                            ]
+                        }
+                    },
+                    "commands": {
+                        "default": "all"
+                    }
+                },
+                {
+                    "name": "open port 80",
+                    "purpose": "Clean up temporary files",
+                    // non root user can open port 80
+                    "cred": {
+                        // only need CAP_NET_BIND_SERVICE
+                        "capabilities": { 
+                            "default": "none",
+                            "add": [
+                                "CAP_NET_BIND_SERVICE"
+                            ]
+                        }
+                    },
+                    "commands": {
+                        "default": "all"
+                    }
+                }
+            ]
+        }
+    ]
+}
