@@ -44,6 +44,22 @@ DOCUMENTATION = """
               - name: ANSIBLE_SR_ROLE
             keyword:
               - name: become_role
+        become_user:
+            description: Set owner to execute the task file script. Should always the final user in RootAsRole policy.
+            default: root
+            ini:
+              - section: privilege_escalation
+                key: become_user
+              - section: sr_become_plugin
+                key: user
+            vars:
+              - name: ansible_become_user
+              - name: ansible_sr_user
+            env:
+              - name: ANSIBLE_BECOME_USER
+              - name: ANSIBLE_SR_USER
+            keyword:
+              - name: become_user
         become_flags:
             description: Options to pass to sr
             default: ''
@@ -88,6 +104,10 @@ class BecomeModule(BecomeBase):
     # messages for detecting prompted password issues
     fail = ('Permission denied')
     missing = ('Permission denied')
+  
+    def __init__(self):
+        super(BecomeModule, self).__init__()
+
 
     def build_become_command(self, cmd, shell):
         super(BecomeModule, self).build_become_command(cmd, shell)
@@ -99,13 +119,22 @@ class BecomeModule(BecomeBase):
 
         becomecmd = self.get_option('become_exe') or self.name
 
-        role = ''
-
-        if self.get_option('become_role'):
-            role = '-r {}' % self.get_option('become_role')
-        
-        if self.get_option('become_task'):
-            role = '-t {}' % self.get_option('become_task')
-
+        becomeuser = self.get_option('become_user')
+        chown_user_cmd = ''
+        end_chown = ''
         flags = self.get_option('become_flags') or ''
-        return ' '.join([becomecmd, flags, role, self._build_success_command(cmd, shell)])
+        ## check if executed files in tmp/ansible-tmp-<timestamp>-<id> directory are owned by the become_user
+        for arg in shlex.split(cmd):
+          for r in re.findall(r'\/.*ansible-tmp-.*\/', arg):
+              chown_user_cmd += '/usr/bin/sr -r ansible -t ansible_chown /usr/bin/chown -R "`{cmd} {flag} id -u`":"`{cmd} {flag} id -u`" "{f}"; '.format(cmd=becomecmd,flag=flags,f=r)
+              end_chown += '; /usr/bin/sr -r ansible -t ansible_chown /usr/bin/chown -R "`id -u`":"`id -u`" "{}" '.format(r)
+
+
+        #if self.get_option('become_role'):
+        #    role = '-r {}' % self.get_option('become_role')
+        
+        #if self.get_option('become_task'):
+        #    role = '-t {}' % self.get_option('become_task')
+
+        
+        return ' '.join([chown_user_cmd, becomecmd, flags, self._build_success_command(cmd, shell), end_chown])

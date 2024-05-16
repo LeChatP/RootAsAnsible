@@ -5,6 +5,9 @@
     dest: '/tmp/RootAsRole'
     clone: true
     update: true
+    version: 'develop'
+  become: false
+  register: git
 
 - name: Install Dependencies script
   ansible.builtin.shell:
@@ -12,6 +15,8 @@
     chdir: '/tmp/RootAsRole'
   register: deps
   timeout: 600
+  become: true
+  when: git.changed
 
 - name: Run configuration script
   ansible.builtin.shell:
@@ -22,11 +27,13 @@
   ignore_errors: true
   register: configure
   timeout: 300
+  when: deps.changed
 
 - name: exit if configure failed
   fail:
     msg: "Configure failed"
   when: configure.rc != 0
+  become: false
 
 - name: Install RootAsRole
   ansible.builtin.shell:
@@ -34,11 +41,21 @@
     chdir: '/tmp/RootAsRole'
   become: false
   timeout: 600
+  when: git.changed
 
 - name: cat /etc/security/rootasrole.json
   ansible.builtin.shell:
     cmd: 'cat /etc/security/rootasrole.json'
   register: rootasrole
+  become: true
+  become_method: sudo
+  changed_when: false
+
+- name: Set no-password if variable is set
+  ansible.builtin.template:
+    src: "../templates/pam_sr"
+    dest: "/etc/pam.d/sr"
+  when: "sr_password == 'no'"
   become: true
   become_method: sudo
   changed_when: false

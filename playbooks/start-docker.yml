@@ -34,6 +34,8 @@
         name: rootasansiblecontainer
         image: rootasansible
         state: started
+        capabilities:
+          - NET_ADMIN
         expose:
           - "22"
         networks:

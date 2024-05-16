@@ -1,0 +1,215 @@
+{
+    "version": "3.0.0-alpha.4",
+    "storage": {
+        "method": "json",
+        "settings": {
+            "immutable": false,
+            "path": "/etc/security/rootasrole.json"
+        }
+    },
+    "options": {
+        "timeout": {
+            "type": "ppid",
+            "duration": "00:05:00"
+        },
+        "path": {
+            "default": "delete",
+            "add": [
+                "/usr/local/sbin",
+                "/usr/local/bin",
+                "/usr/sbin",
+                "/usr/bin",
+                "/sbin",
+                "/bin",
+                "/snap/bin"
+            ]
+        },
+        "env": {
+            "default": "delete",
+            "keep": [
+                "HOME",
+                "USER",
+                "LOGNAME",
+                "COLORS",
+                "DISPLAY",
+                "HOSTNAME",
+                "KRB5CCNAME",
+                "LS_COLORS",
+                "PS1",
+                "PS2",
+                "XAUTHORY",
+                "XAUTHORIZATION",
+                "XDG_CURRENT_DESKTOP"
+            ],
+            "check": [
+                "COLORTERM",
+                "LANG",
+                "LANGUAGE",
+                "LC_*",
+                "LINGUAS",
+                "TERM",
+                "TZ"
+            ]
+        },
+        "root": "user",
+        "bounding": "strict",
+        "wildcard-denied": ";&|"
+    },
+    "roles": [
+        { 
+            "name": "ansible",
+            "actors": [
+                {
+                    "type": "group",
+                    "groups": [
+                        "ansible"
+                    ]
+                }
+            ],
+            "tasks": [
+                {
+                    "name": "ansible_chown",
+                    "purpose": "Change ownership of files",
+                    "cred": {
+                        "capabilities": {
+                            "default": "none",
+                            "add": [
+                                "CAP_CHOWN"
+                            ]
+                        }
+                    },
+                    "commands": {
+                        "default": "none",
+                        "add": [
+                            "chown -R .+:.+ .*/tmp/ansible-tmp-.*"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "deploy_apache",
+            "actors": [
+                {
+                    "type": "group",
+                    "groups": [
+                      "ansible"
+                    ]
+                }
+            ],
+            "tasks": [
+                {
+                    "name": "install_apache2",
+                    "purpose": "Install latest version of Apache",
+                    "cred": {
+                        "setuid": "root", 
+                        "setgid": ["root","lechatp"],
+                        "capabilities": {
+                            "default": "all",
+                            "add": [
+                                "CAP_NET_BIND_SERVICE",
+                                "CAP_CHOWN"
+                            ] 
+                        }
+                    },
+                    "commands": {
+                        "default": "all" 
+                    }
+                },
+                {
+                    "name": "deploy_website",
+                    "purpose": "Deploy website source code",
+                    "cred": {
+                        "setuid": "www-data",
+                        "setgid": ["www-data","lechatp"],
+                        "capabilities": {
+                            "default": "none",
+                            "add": [
+                                "CAP_DAC_OVERRIDE",
+                                "CAP_CHOWN"
+                            ]
+                        }
+                    },
+                    "commands": {
+                        "default": "all"
+                    }
+                },
+                {
+                    "name": "create_document_root",
+                    "purpose": "Create document root",
+                    "cred": { 
+                        "setuid": "www-data",
+                        "setgid": ["www-data","lechatp"],
+                        "capabilities": { 
+                            "default": "none"
+                        }
+                    },
+                    "commands": {
+                        "default": "all"
+                    }
+                },
+                {
+                    "name": "setup_virtualhost",
+                    "purpose": "Set up virtualHost",
+                    "cred": { 
+                        "setuid": "root",
+                        "setgid": ["root","lechatp"],
+                        "capabilities": { 
+                            "default": "none"
+                        }
+                    },
+                    "commands": {
+                        "default": "all"
+                    }
+                },
+                {
+                    "name": "Enable site",
+                    "purpose": "Enable virtualHost",
+                    "cred": { 
+                        "setuid": "root",
+                        "setgid": ["root","lechatp"],
+                        "capabilities": { 
+                            "default": "none"
+                        }
+                    },
+                    "commands": {
+                        "default": "all"
+                    }
+                },
+                {
+                    "name": "restart_apache",
+                    "purpose": "Reload Apache to apply changes",
+                    "cred": {
+                        "setuid": "root",
+                        "setgid": ["root","lechatp"],
+                        "capabilities": {
+                            "default": "none",
+                            "add": [
+                                "CAP_NET_BIND_SERVICE"
+                            ]
+                        }
+                    },
+                    "commands": {
+                        "default": "all"
+                    }
+                },
+                {
+                    "name": "open port 80",
+                    "purpose": "Clean up temporary files",
+                    "cred": {
+                        "capabilities": { 
+                            "default": "none",
+                            "add": [
+                                "CAP_NET_ADMIN",
+                                "CAP_NET_RAW"
+                            ]
+                        }
+                    },
+                    "commands": {
+                        "default": "all"
+                    }
+                }
+            ]
+        }
+    ]
+}

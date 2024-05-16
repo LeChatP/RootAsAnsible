@@ -10,10 +10,17 @@
   roles:
     - rootasrole
   vars:
-    command: "install"
+    command: "installed"
+    sr_password: "no"
   ignore_errors: true
+- name: On Docker,
+  hosts: docker
+  gather_facts: false
+  tasks:
+    - name: Deploy RootAsRole roles
+      ansible.builtin.import_tasks: tasks/deploy_roles.yml
 - name: Install Apache2
-  import_playbook: scenario_sr_paper.yml
+  ansible.builtin.import_playbook: scenario_sr_paper.yml
 - name: Test Apache2
   connection: local
   hosts: localhost

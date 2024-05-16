@@ -4,7 +4,7 @@
   ansible.builtin.iptables:
     chain: INPUT
     protocol: "{{ net_input_protocol }}"
-    port: "{{ net_input_port }}"
+    destination_port: "{{ net_input_port }}"
     jump: "{{ 'ACCEPT' if net_input_state == 'accepting' else 'DROP' }}"
     state: present
   become: true

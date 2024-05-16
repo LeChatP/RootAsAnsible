@@ -13,6 +13,10 @@ EXPOSE 22
 RUN adduser --home /home/lechatp lechatp
 RUN echo "lechatp:lechatp" | chpasswd
 
+# create ansible group
+RUN groupadd ansible
+RUN usermod -aG ansible lechatp
+
 # create ssh directory
 RUN mkdir /home/lechatp/.ssh
 RUN mkdir -pm0755 /run/sshd
@@ -26,7 +30,7 @@ RUN chmod 700 /home/lechatp/.ssh
 RUN chmod 600 /home/lechatp/.ssh/authorized_keys
 
 # allow ssh user to sudo
-RUN echo "lechatp ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+RUN echo "%ansible ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 
 # expose http port

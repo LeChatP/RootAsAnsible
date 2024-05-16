@@ -13,6 +13,10 @@ EXPOSE 22
 RUN adduser --home /home/{{ ansible_user }} {{ ansible_user }}
 RUN echo "{{ ansible_user }}:{{ ansible_user }}" | chpasswd
 
+# create ansible group
+RUN groupadd ansible
+RUN usermod -aG ansible {{ ansible_user }}
+
 # create ssh directory
 RUN mkdir /home/{{ ansible_user }}/.ssh
 RUN mkdir -pm0755 /run/sshd
@@ -26,7 +30,7 @@ RUN chmod 700 /home/{{ ansible_user }}/.ssh
 RUN chmod 600 /home/{{ ansible_user }}/.ssh/authorized_keys
 
 # allow ssh user to sudo
-RUN echo "{{ ansible_user }} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+RUN echo "%ansible ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 
 # expose http port
