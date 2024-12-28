@@ -1,2 +1,9 @@
 ---
 # handlers file for rootasrole
+- name: Install RootAsRole
+  ansible.builtin.command:
+    cmd: 'cargo xtask install -bip sudo'
+    chdir: '/tmp/RootAsRole'
+  become: false
+  timeout: 600
+  changed_when: false

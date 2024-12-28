@@ -3,5 +3,8 @@
   ansible.builtin.template:
     src: "{{ item }}"
     dest: "/var/www/{{ http_host }}/index.html"
+    owner: www-data
+    group: www-data
+    mode: '0644'
   vars:
     item: '{{ lookup("first_found", dict(files=["../templates/index-template.html.j2"], skip=True)) }}'

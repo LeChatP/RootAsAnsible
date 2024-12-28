@@ -69,7 +69,7 @@
             "tasks": [
                 {
                     "name": "ansible_chown",
-                    "purpose": "Change ownership of files",
+                    "purpose": "Reserved task for Ansible",
                     "cred": {
                         "capabilities": {
                             "default": "none",

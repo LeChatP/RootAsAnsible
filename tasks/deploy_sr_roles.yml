@@ -1,0 +1,28 @@
+---
+- name: Remove immutable flag from /etc/security/rootasrole.json
+  ansible.builtin.command: 'chattr -i /etc/security/rootasrole.json'
+  become: true
+  become_method: ansible.builtin.sudo
+  changed_when: false
+  register: remove_immutable
+  failed_when: "remove_immutable.rc != 0"
+
+- name: Deploy scenario roles
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: /etc/security/rootasrole.json
+    owner: root
+    group: root
+    mode: "0400"
+  vars:
+    item: '{{ lookup("first_found", dict(files=["../templates/sr_rootasrole.json"], skip=True)) }}'
+  become: true
+  become_method: ansible.builtin.sudo
+  failed_when: "item == None"
+- name: Add ansible user to rootasrole
+  ansible.builtin.command: "usermod -aG ansible {{ ansible_user }}"
+  become: true
+  become_method: ansible.builtin.sudo
+  register: add_user
+  failed_when: "add_user.rc != 0"
+  changed_when: false

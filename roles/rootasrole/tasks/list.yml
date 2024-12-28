@@ -1,22 +1,13 @@
 ---
 
 - name: Read config file
-  vars:
-    rar_config: "{{ lookup('file', {{config_file_path}} ) | from_xml }}" 
+  ansible.builtin.include_vars:
+    file: /etc/security/rootasrole.json
+    name: rar_config
+- name: Convert config to json
+  ansible.builtin.set_fact:
+    rar_config: "{{ rar_config | to_nice_json }}"
 # Task to list all roles
 - name: List all roles
-  debug: 
-    var: roles
-  when: role is not defined and task is not defined  # Execute this when no specific role or task is specified
-
-# Task to describe a specific role
-- name: Describe role
-  debug:  # Assuming role descriptions are stored in a variable 'role_descriptions'
-    msg: "{{ role_descriptions[role] }}"
-  when: role is defined and task is not defined  # Execute this when a specific role is specified without a specific task
-
-# Task to describe a task within a role
-- name: Describe task within role
-  debug:  # Assuming task information is stored in a structured way, e.g., 'roles_tasks'
-    msg: "{{ roles_tasks[role][task] }}"
-  when: role is defined and task is defined  # Execute this when both a specific role and a specific task are specified
+  ansible.builtin.debug:
+    var: rar_config

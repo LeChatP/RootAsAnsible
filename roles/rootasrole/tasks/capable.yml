@@ -1,4 +1,5 @@
 ---
 - name: Run capable command
-  command: capable -j {{ command }}
+  ansible.builtin.command: capable {{ command }}
   register: capable_output
+  changed_when: false

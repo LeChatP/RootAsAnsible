@@ -1,6 +1,0 @@
----
-# defaults file for net_input
-mallory:
-  net_input_protocol: tcp
-  net_input_port: 80
-  net_input_state: present

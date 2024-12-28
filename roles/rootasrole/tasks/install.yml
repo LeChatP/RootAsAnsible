@@ -1,6 +1,6 @@
 ---
 - name: Clone RootAsRole repository
-  git:
+  ansible.builtin.git:
     repo: 'https://github.com/LeChatP/RootAsRole.git'
     dest: '/tmp/RootAsRole'
     clone: true
@@ -8,54 +8,25 @@
     version: 'develop'
   become: false
   register: git
+  changed_when: false
+  notify: Install RootAsRole
 
-- name: Install Dependencies script
-  ansible.builtin.shell:
-    cmd: './dependencies.sh -yd'
-    chdir: '/tmp/RootAsRole'
-  register: deps
-  timeout: 600
-  become: true
-  when: git.changed
-
-- name: Run configuration script
-  ansible.builtin.shell:
-    cmd: 'yes | ./configure.sh -yd'
-    chdir: '/tmp/RootAsRole'
-  become: true
-  become_method: sudo
-  ignore_errors: true
-  register: configure
-  timeout: 300
-  when: deps.changed
-
-- name: exit if configure failed
-  fail:
-    msg: "Configure failed"
-  when: configure.rc != 0
-  become: false
-
-- name: Install RootAsRole
-  ansible.builtin.shell:
-    cmd: 'make install'
-    chdir: '/tmp/RootAsRole'
-  become: false
-  timeout: 600
-  when: git.changed
-
-- name: cat /etc/security/rootasrole.json
-  ansible.builtin.shell:
+- name: Cat /etc/security/rootasrole.json
+  ansible.builtin.command:
     cmd: 'cat /etc/security/rootasrole.json'
   register: rootasrole
   become: true
-  become_method: sudo
+  become_method: ansible.builtin.sudo
   changed_when: false
 
 - name: Set no-password if variable is set
   ansible.builtin.template:
-    src: "../templates/pam_sr"
+    src: "{{ playbook_dir }}/templates/pam_sr"
     dest: "/etc/pam.d/sr"
+    mode: "0644"
+    owner: root
+    group: root
   when: "sr_password == 'no'"
   become: true
-  become_method: sudo
+  become_method: ansible.builtin.sudo
   changed_when: false

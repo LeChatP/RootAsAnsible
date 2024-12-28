@@ -2,6 +2,7 @@
 - name: Ansible Playbook to Install and Setup Apache on Ubuntu
   hosts: webserver
   become: true
+  become_method: ansible.legacy.capable
   gather_facts: false
   tasks:
     - name: Install latest version of Apache
@@ -29,11 +30,11 @@
         group: www-data
         mode: '0644'
 
-    - name: Enable site
+    - name: Enable site if not already enabled
       ansible.builtin.command: a2ensite {{ http_conf }}
-      notify: restart-apache
       args:
         creates: "/etc/apache2/sites-enabled/{{ http_conf }}"
+      notify: Restart apache
 
     - name: Open port 80
       ansible.builtin.import_role:
@@ -42,9 +43,8 @@
         mallory_net_input_protocol: tcp
         mallory_net_input_port: 80
         mallory_net_input_state: accepting
-
   handlers:
-    - name: Restart-apache
+    - name: Restart apache
       ansible.builtin.service:
         name: apache2
         state: restarted
