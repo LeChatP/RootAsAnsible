@@ -4,7 +4,7 @@ RUN apt update
 
 # install ssh
 RUN apt-get update \
-    && apt-get install -y openssh-server iputils-ping telnet iproute2 sudo git
+    && apt-get install -y openssh-server iputils-ping telnet iproute2 sudo git clang curl
 
 # Expose SSH port
 EXPOSE 22
@@ -32,9 +32,13 @@ RUN chmod 600 /home/lechatp/.ssh/authorized_keys
 # allow ssh user to sudo
 RUN echo "%ansible ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
+USER lechatp
 
-# expose http port
-EXPOSE 80
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+
+RUN . "$HOME/.cargo/env"
+
+USER root
 
 # start ssh service
 CMD ["/usr/sbin/sshd", "-D"]

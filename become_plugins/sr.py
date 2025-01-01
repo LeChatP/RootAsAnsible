@@ -44,22 +44,6 @@ DOCUMENTATION = """
               - name: ANSIBLE_SR_ROLE
             keyword:
               - name: become_role
-        become_user:
-            description: Set owner to execute the task file script. Should always the final user in RootAsRole policy.
-            default: root
-            ini:
-              - section: privilege_escalation
-                key: become_user
-              - section: sr_become_plugin
-                key: user
-            vars:
-              - name: ansible_become_user
-              - name: ansible_sr_user
-            env:
-              - name: ANSIBLE_BECOME_USER
-              - name: ANSIBLE_SR_USER
-            keyword:
-              - name: become_user
         become_flags:
             description: Options to pass to sr
             default: ''
@@ -119,7 +103,6 @@ class BecomeModule(BecomeBase):
 
         becomecmd = self.get_option('become_exe') or self.name
 
-        becomeuser = self.get_option('become_user')
         chown_user_cmd = ''
         end_chown = ''
         flags = self.get_option('become_flags') or ''

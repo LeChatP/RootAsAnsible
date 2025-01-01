@@ -1,0 +1,33 @@
+---
+- name: Check if cargo is installed
+  ansible.builtin.command:
+    cmd: cargo -V
+  register: cargo_exists
+  failed_when: false
+  changed_when: false
+  environment:
+    PATH: "{{ ansible_env.PATH }}:{{ ansible_env.HOME }}/.cargo/bin"
+
+- name: Download Installer
+  when: cargo_exists.rc != 0
+  ansible.builtin.get_url:
+    url: https://sh.rustup.rs
+    dest: /tmp/sh.rustup.rs
+    mode: '0755'
+    force: 'yes'
+  tags:
+    - rust
+
+- name: Install rust/cargo
+  when: cargo_exists.rc != 0
+  ansible.builtin.command: /tmp/sh.rustup.rs -y
+  tags:
+    - rust
+  changed_when: false
+
+- name: Rustup update
+  when: cargo_exists.rc == 0
+  ansible.builtin.command: rustup update
+  changed_when: false
+  environment:
+    PATH: "{{ ansible_env.PATH }}:{{ ansible_env.HOME }}/.cargo/bin"

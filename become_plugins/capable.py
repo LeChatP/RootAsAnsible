@@ -28,14 +28,11 @@ import shlex
 import os
 
 from ansible.plugins.become import BecomeBase
-from ansible.plugins.callback import CallbackBase
-from ansible.module_utils.common.text.converters import to_native
-from ansible.errors import AnsibleError
 
 
 class BecomeModule(BecomeBase):
 
-    name = 'gensr'
+    name = 'sr'
 
     # messages for detecting prompted password issues
     fail = ('Permission denied')
@@ -55,44 +52,19 @@ class BecomeModule(BecomeBase):
 
         becomecmd = self.get_option('become_exe') or self.name
 
-        becomeuser = self.get_option('become_user')
         chown_user_cmd = ''
         end_chown = ''
         output = '-o /tmp/ansible_rootasrole.json'.format()
         ## check if executed files in tmp/ansible-tmp-<timestamp>-<id> directory are owned by the become_user
         for arg in shlex.split(cmd):
           for r in re.findall(r'\/.*ansible-tmp-.*\/', arg):
-              chown_user_cmd += '/usr/bin/sr -r ansible -t ansible_chown /usr/bin/chown -R "`{cmd} {flag} id -u`":"`{cmd} {flag} id -u`" "{f}"; '.format(cmd=becomecmd,flag=flags,f=r)
+              chown_user_cmd += '/usr/bin/sr -r ansible -t ansible_chown /usr/bin/chown -R "`{cmd} id -u`":"`{cmd} id -u`" "{f}"; '.format(cmd=becomecmd,f=r)
               end_chown += '; /usr/bin/sr -r ansible -t ansible_chown /usr/bin/chown -R "`id -u`":"`id -u`" "{}" '.format(r)
 
 
-        if self.get_option('become_playbook'):
-            playbook = '-p {}' % self.get_option('become_playbook')
-        elif 'ANSIBLE_PLAYBOOK' in os.environ:
-            playbook = '-p {}' % os.environ['ANSIBLE_PLAYBOOK']
+        playbook = '-p {}' % self.get_option('become_playbook') or os.environ['ANSIBLE_PLAYBOOK'] or ''
         
-        if self.get_option('become_task'):
-            task = '-t {}' % self.get_option('become_task')
-        elif 'ANSIBLE_TASK' in os.environ:
-            task += '-t {}' % os.environ['ANSIBLE_TASK']
+        task = '-t {}' % self.get_option('become_task') or os.environ['ANSIBLE_TASK'] or ''
 
         
         return ' '.join([chown_user_cmd, becomecmd, output, playbook, task, self._build_success_command(cmd, shell), end_chown])
-
-class CapableCallbackModule(CallbackBase):
-    """
-    This callback module is used to detect the rights needed to execute a command
-    """
-    CALLBACK_VERSION = 2.0
-    CALLBACK_TYPE = 'notification'
-    CALLBACK_NAME = 'capable'
-    CALLBACK_NEEDS_WHITELIST = True
-
-    def __init__(self):
-        super(CapableCallbackModule, self).__init__()
-
-    def v2_playbook_on_task_start(self, task, is_conditional):
-        os.environ['ANSIBLE_TASK'] = task.get_name()
-
-    def v2_playbook_on_start(self):
-        os.environ['ANSIBLE_PLAYBOOK'] = self.playbook_filename

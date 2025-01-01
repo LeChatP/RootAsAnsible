@@ -3,11 +3,11 @@
 - name: Read config file
   ansible.builtin.include_vars:
     file: /etc/security/rootasrole.json
-    name: rar_config
+    name: rootasrole_config
 - name: Convert config to json
   ansible.builtin.set_fact:
-    rar_config: "{{ rar_config | to_nice_json }}"
+    rootasrole_config: "{{ rootasrole_config | to_nice_json }}"
 # Task to list all roles
 - name: List all roles
   ansible.builtin.debug:
-    var: rar_config
+    var: rootasrole_config

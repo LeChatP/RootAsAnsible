@@ -1,15 +1,34 @@
 ---
+- name: Check if RootAsRole is installed
+  ansible.builtin.command:
+    cmd: command -v sr
+  register: sr
+  failed_when: false
+  changed_when: false
+
 - name: Clone RootAsRole repository
+  when: sr.rc != 0
   ansible.builtin.git:
     repo: 'https://github.com/LeChatP/RootAsRole.git'
     dest: '/tmp/RootAsRole'
     clone: true
     update: true
-    version: 'develop'
+    version: "{{ rootasrole_branch }}"
   become: false
   register: git
-  changed_when: false
-  notify: Install RootAsRole
+
+- name: Performing install xtask
+  when: sr.rc != 0
+  ansible.builtin.command:
+    cmd: 'cargo xtask install -bip sudo'
+    chdir: '/tmp/RootAsRole'
+  become: false
+  timeout: 600
+  args:
+    creates:
+      - '/usr/bin/sr'
+  environment:
+    PATH: "{{ ansible_env.PATH }}:{{ ansible_env.HOME }}/.cargo/bin"
 
 - name: Cat /etc/security/rootasrole.json
   ansible.builtin.command:
@@ -26,7 +45,6 @@
     mode: "0644"
     owner: root
     group: root
-  when: "sr_password == 'no'"
+  when: "rootasrole_sr_password == 'no'"
   become: true
   become_method: ansible.builtin.sudo
-  changed_when: false
