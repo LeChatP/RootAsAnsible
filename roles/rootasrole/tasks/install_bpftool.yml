@@ -1,0 +1,37 @@
+---
+- name: Check if bpftool is installed
+  ansible.builtin.command:
+    cmd: bpftool version
+  register: bpftool_installed
+  failed_when: false
+  changed_when: false
+
+- name: Git clone bpftool
+  when: bpftool_installed.rc != 0
+  ansible.builtin.git:
+    repo: 'https://github.com/libbpf/bpftool.git'
+    dest: '/tmp/bpftool'
+    clone: true
+    update: true
+    version: "main"
+    recursive: true
+
+- name: Make bpftool
+  when: bpftool_installed.rc != 0
+  ansible.builtin.command:
+    cmd: make
+    chdir: '/tmp/bpftool/src'
+  args:
+    creates:
+      - '/tmp/bpftool/src/bpftool'
+
+- name: Install bpftool
+  when: bpftool_installed.rc != 0
+  ansible.builtin.command:
+    cmd: make install
+    chdir: '/tmp/bpftool/src'
+  args:
+    creates:
+      - '/usr/bin/bpftool'
+  become: true
+  become_method: ansible.builtin.sudo

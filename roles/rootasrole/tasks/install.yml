@@ -1,4 +1,6 @@
 ---
+- name: Install Rust
+  ansible.builtin.import_tasks: install_rust.yml
 - name: Check if RootAsRole is installed
   ansible.builtin.command:
     cmd: command -v sr

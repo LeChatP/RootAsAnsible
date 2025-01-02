@@ -3,14 +3,6 @@
   import_playbook: playbooks/create-sshkey.yml
 - name: Start docker
   import_playbook: playbooks/start-docker.yml
-- name: Install Rust
-  hosts: docker
-  connection: ssh
-  become: false
-  gather_facts: true
-  tasks:
-    - name: Import Rust installation tasks
-      ansible.builtin.import_tasks: tasks/install-rust.yml
 - name: Install RootAsRole
   hosts: docker
   connection: ssh

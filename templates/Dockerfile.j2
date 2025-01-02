@@ -4,7 +4,11 @@ RUN apt update
 
 # install ssh
 RUN apt-get update \
-    && apt-get install -y openssh-server iputils-ping telnet iproute2 sudo git clang curl
+    && apt-get install -y \
+        openssh-server iputils-ping telnet iproute2 sudo \
+        git clang curl build-essential libelf-dev llvm \
+        linux-tools-generic binutils-dev libcap-dev libclang-dev \
+        libdbus-1-dev pkg-config
 
 # Expose SSH port
 EXPOSE 22

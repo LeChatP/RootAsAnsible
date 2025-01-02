@@ -3,6 +3,10 @@
   ansible.builtin.include_tasks: install.yml
   when: rootasrole_command == 'install'
 
+- name: Install Capable
+  ansible.builtin.include_tasks: install_capable.yml
+  when: rootasrole_command == 'install capable'
+
 - name: List Roles/Tasks/Actors in RootAsRole
   ansible.builtin.include_tasks: list.yml
   when: rootasrole_command == 'list'
