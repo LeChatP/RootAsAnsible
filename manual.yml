@@ -1,8 +1,10 @@
 ---
 - name: Create ssh key
   import_playbook: playbooks/create-sshkey.yml
+
 - name: Start docker
   import_playbook: playbooks/start-docker.yml
+
 - name: Install RootAsRole
   hosts: docker
   connection: ssh
@@ -21,4 +23,14 @@
     - rootasrole
   vars:
     rootasrole_command: "install capable"
+    rootasrole_branch: "main"
+
+- name: Install gensr
+  hosts: docker
+  connection: ssh
+  become: false
+  roles:
+    - rootasrole
+  vars:
+    rootasrole_command: "install gensr"
     rootasrole_branch: "main"

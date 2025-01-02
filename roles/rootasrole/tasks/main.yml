@@ -7,6 +7,10 @@
   ansible.builtin.include_tasks: install_capable.yml
   when: rootasrole_command == 'install capable'
 
+- name: Install Gensr
+  ansible.builtin.include_tasks: install_gensr.yml
+  when: rootasrole_command == 'install gensr'
+
 - name: List Roles/Tasks/Actors in RootAsRole
   ansible.builtin.include_tasks: list.yml
   when: rootasrole_command == 'list'

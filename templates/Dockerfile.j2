@@ -10,6 +10,9 @@ RUN apt-get update \
         linux-tools-generic binutils-dev libcap-dev libclang-dev \
         libdbus-1-dev pkg-config
 
+RUN apt-get install -y \
+    libacl1-dev
+
 # Expose SSH port
 EXPOSE 22
 

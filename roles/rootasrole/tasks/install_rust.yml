@@ -1,6 +1,6 @@
 ---
 - name: Check if cargo is installed
-  ansible.builtin.command:
+  ansible.builtin.shell:
     cmd: rustup toolchain list | grep -q "{{ rustup_toolchain | default('stable') }}"
   register: rustup_toolchain_list
   failed_when: false
