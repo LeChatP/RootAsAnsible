@@ -31,7 +31,7 @@
 
     - name: Enable site
       ansible.builtin.command: a2ensite {{ http_conf }}
-      notify: restart-apache
+      notify: Restart-apache
       args:
         creates: "/etc/apache2/sites-enabled/{{ http_conf }}"
 

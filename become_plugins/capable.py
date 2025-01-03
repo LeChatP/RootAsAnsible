@@ -21,6 +21,16 @@ DOCUMENTATION = """
             required: False
             default: None
             type: str
+        rootasrole_policy_output:
+            description: The output file of the policy
+            required: False
+            default: "/tmp/capable_output.json"
+            type: str
+        gensr_exe:
+            description: The executable to run to detect rights
+            required: False
+            default: "/usr/bin/gensr"
+            type: str
 """
 
 import re
@@ -28,7 +38,7 @@ import shlex
 import os
 
 from ansible.plugins.become import BecomeBase
-
+from ansible.context import CLIARGS
 
 class BecomeModule(BecomeBase):
 
@@ -40,7 +50,25 @@ class BecomeModule(BecomeBase):
   
     def __init__(self):
         super(BecomeModule, self).__init__()
+        self.playbook_name = None
+        self.task_name = None
+        self.rootasrole_policy_output = None
 
+    def set_options(self, task_keys=None, var_options=None, direct=None):
+        super().set_options(task_keys=task_keys, var_options=var_options, direct=direct)
+        # Retrieve the task name from the task keys
+        if task_keys and 'name' in task_keys:
+            self.task_name = task_keys['name']
+        
+        # Retrieve the playbook name from CLIARGS or other sources
+        cli_args = CLIARGS.get('playbook', None)
+        if cli_args:
+            # Extract the playbook name from the full path
+            self.playbook_name = cli_args.split('/')[-1]
+        else:
+            self.playbook_name = "unknown"
+
+        self.rootasrole_policy_output = self.get_option('rootasrole_policy_output')
 
     def build_become_command(self, cmd, shell):
         super(BecomeModule, self).build_become_command(cmd, shell)
@@ -54,17 +82,19 @@ class BecomeModule(BecomeBase):
 
         chown_user_cmd = ''
         end_chown = ''
-        output = '-o /tmp/ansible_rootasrole.json'.format()
+        gensr_args = '-c {}'.format(self.get_option('rootasrole_policy_output') or self.rootasrole_policy_output or '/tmp/capable_output.json')
         ## check if executed files in tmp/ansible-tmp-<timestamp>-<id> directory are owned by the become_user
         for arg in shlex.split(cmd):
           for r in re.findall(r'\/.*ansible-tmp-.*\/', arg):
               chown_user_cmd += '/usr/bin/sr -r ansible -t ansible_chown /usr/bin/chown -R "`{cmd} id -u`":"`{cmd} id -u`" "{f}"; '.format(cmd=becomecmd,f=r)
               end_chown += '; /usr/bin/sr -r ansible -t ansible_chown /usr/bin/chown -R "`id -u`":"`id -u`" "{}" '.format(r)
-
-
-        playbook = '-p {}' % self.get_option('become_playbook') or os.environ['ANSIBLE_PLAYBOOK'] or ''
+              
+        if (self.get_option('become_playbook') or self.playbook_name) != None:
+            gensr_args += ' -p {}'.format(self.get_option('become_playbook') or self.playbook_name)
+        if (self.get_option('become_task') or self.task_name) != None:
+            gensr_args += ' -t {}'.format(self.get_option('become_task') or self.task_name)
         
-        task = '-t {}' % self.get_option('become_task') or os.environ['ANSIBLE_TASK'] or ''
+        gensr_exe = '{} generate'.format(self.get_option('gensr_exe') or '/usr/bin/gensr')
 
         
-        return ' '.join([chown_user_cmd, becomecmd, output, playbook, task, self._build_success_command(cmd, shell), end_chown])
+        return ' '.join([chown_user_cmd, becomecmd, gensr_exe, gensr_args, "--", self._build_success_command(cmd, shell), end_chown])

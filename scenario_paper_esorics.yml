@@ -30,11 +30,11 @@
         group: www-data
         mode: '0644'
 
-    - name: Enable site if not already enabled
+    - name: Enable site
       ansible.builtin.command: a2ensite {{ http_conf }}
+      notify: Restart-apache
       args:
         creates: "/etc/apache2/sites-enabled/{{ http_conf }}"
-      notify: Restart apache
 
     - name: Open port 80
       ansible.builtin.import_role:
@@ -43,8 +43,9 @@
         mallory_net_input_protocol: tcp
         mallory_net_input_port: 80
         mallory_net_input_state: accepting
+
   handlers:
-    - name: Restart apache
+    - name: Restart-apache
       ansible.builtin.service:
         name: apache2
         state: restarted

@@ -32,6 +32,12 @@
   environment:
     PATH: "{{ ansible_env.PATH }}:{{ ansible_env.HOME }}/.cargo/bin"
 
+- name: Install strace
+  ansible.builtin.package:
+    name: strace
+    state: present
+  become: true
+
 - name: Install RootAsRole
   ansible.builtin.command:
     cmd: command -v capable

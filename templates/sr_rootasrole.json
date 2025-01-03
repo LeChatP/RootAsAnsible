@@ -1,5 +1,5 @@
 {
-    "version": "3.0.0-alpha.4",
+    "version": "3.0.0",
     "storage": {
         "method": "json",
         "settings": {
@@ -71,6 +71,8 @@
                     "name": "ansible_chown",
                     "purpose": "Reserved task for Ansible",
                     "cred": {
+                        "setuid": "ansible",
+                        "setgid": "ansible",
                         "capabilities": {
                             "default": "none",
                             "add": [
@@ -83,6 +85,37 @@
                         "default": "none",
                         "add": [
                             "chown -R .+:.+ .*/tmp/ansible-tmp-.*"
+                        ]
+                    }
+                },
+                {
+                    "name": "ansible_id",
+                    "purpose": "Reserved task for Ansible",
+                    "cred": {
+                        "setuid": "ansible",
+                        "setgid": "ansible"
+                    },
+                    "commands": {
+                        "default": "none",
+                        "add": [
+                            "id -u"
+                        ]
+                    }
+                },
+                {
+                    "name": "ansible_capable",
+                    "purpose": "Ansible become capable",
+                    "cred": {
+                        "setuid": "ansible",
+                        "setgid": "ansible",
+                        "capabilities": {
+                            "default": "all"
+                        }
+                    },
+                    "commands": {
+                        "default": "none",
+                        "add": [
+                            "/usr/bin/gensr .*"
                         ]
                     }
                 }

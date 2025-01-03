@@ -34,3 +34,40 @@
   vars:
     rootasrole_command: "install gensr"
     rootasrole_branch: "main"
+
+- name: Deploy RootAsRole roles for Ansible
+  hosts: docker
+  gather_facts: false
+  tasks:
+    - name: Deploy RootAsRole roles for Ansible
+      ansible.builtin.import_tasks: tasks/deploy_sr_roles.yml
+
+- name: Install Apache2
+  become_method: ansible.legacy.capable
+  ansible.builtin.import_playbook: scenario_paper_esorics.yml
+
+- name: Test Apache2
+  connection: local
+  hosts: localhost
+  become: false
+  tasks:
+    - name: Test Apache2
+      ansible.builtin.uri:
+        url: "http://{{ ansible_host }}/index.html"
+        status_code: 200
+  ignore_errors: true
+
+- name: Read RootAsRole generated policy
+  hosts: docker
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Get RootAsRole policy contents
+      ansible.builtin.command: cat /etc/security/rootasrole.json
+      register: rar_policy
+      become: true
+      changed_when: false
+    - name: Viewing RootAsRole policy
+      ansible.builtin.debug:
+        msg: "{{ rar_policy.stdout }}"
+      changed_when: false

@@ -36,6 +36,12 @@
         state: started
         capabilities:
           - NET_ADMIN
+          - BPF
+          - SYS_RESOURCE
+          - SYS_PTRACE
+          - SYS_ADMIN
+          - SETPCAP
+          - DAC_READ_SEARCH
         expose:
           - "22"
         networks:
