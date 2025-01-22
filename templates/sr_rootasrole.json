@@ -57,7 +57,7 @@
     },
     "roles": [
         { 
-            "name": "ansible",
+            "name": "rar_ansible",
             "actors": [
                 {
                     "type": "group",
@@ -84,7 +84,7 @@
                     "commands": {
                         "default": "none",
                         "add": [
-                            "chown -R .+:.+ .*/tmp/ansible-tmp-.*"
+                            "/usr/bin/chown -R \"\\d+\":\"\\d+\" \"/tmp/ansible-tmp-.*\"/"
                         ]
                     }
                 },
@@ -103,7 +103,29 @@
                     }
                 },
                 {
-                    "name": "ansible_capable",
+                    "name": "generate_rar",
+                    "purpose": "Ansible become capable",
+                    "cred": {
+                        "setuid": "root",
+                        "setgid": "root",
+                        "capabilities": {
+                            "default": "all"
+                        }
+                    },
+                    "commands": {
+                        "default": "none",
+                        "add": [
+                            "/usr/bin/gensr generate .*"
+                        ]
+                    },
+                    "options": {
+                        "env": {
+                            "default": "keep"
+                        }
+                    }
+                },
+                {
+                    "name": "deploy_rar",
                     "purpose": "Ansible become capable",
                     "cred": {
                         "setuid": "ansible",
@@ -115,7 +137,7 @@
                     "commands": {
                         "default": "none",
                         "add": [
-                            "/usr/bin/gensr .*"
+                            "/usr/bin/gensr deploy -c \"/[^\"]*\""
                         ]
                     }
                 }

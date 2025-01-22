@@ -8,6 +8,6 @@
         Require all granted
     </Directory>
     
-    ErrorLog ${APACHE_LOG_DIR}/{{ http_host }}_error.log
-    CustomLog ${APACHE_LOG_DIR}/{{ http_host }}_access.log combined
+    ErrorLog {{ http_log_dir }}/{{ http_host }}_error.log
+    CustomLog {{ http_log_dir }}/{{ http_host }}_access.log combined
 </VirtualHost>

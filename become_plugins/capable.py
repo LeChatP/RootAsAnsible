@@ -82,17 +82,15 @@ class BecomeModule(BecomeBase):
 
         chown_user_cmd = ''
         end_chown = ''
-        gensr_args = '-c {}'.format(self.get_option('rootasrole_policy_output') or self.rootasrole_policy_output or '/tmp/capable_output.json')
+        gensr_args = '-c "{}"'.format(self.get_option('rootasrole_policy_output') or self.rootasrole_policy_output or '/tmp/capable_output.json')
         ## check if executed files in tmp/ansible-tmp-<timestamp>-<id> directory are owned by the become_user
         for arg in shlex.split(cmd):
           for r in re.findall(r'\/.*ansible-tmp-.*\/', arg):
-              chown_user_cmd += '/usr/bin/sr -r ansible -t ansible_chown /usr/bin/chown -R "`{cmd} id -u`":"`{cmd} id -u`" "{f}"; '.format(cmd=becomecmd,f=r)
-              end_chown += '; /usr/bin/sr -r ansible -t ansible_chown /usr/bin/chown -R "`id -u`":"`id -u`" "{}" '.format(r)
+              chown_user_cmd += '/usr/bin/sr -r rar_ansible -t ansible_chown /usr/bin/chown -R "`{cmd} id -u`":"`{cmd} id -u`" "{f}"; '.format(cmd=becomecmd,f=r)
+              end_chown += '; /usr/bin/sr -r rar_ansible -t ansible_chown /usr/bin/chown -R "`id -u`":"`id -u`" "{}" '.format(r)
               
-        if (self.get_option('become_playbook') or self.playbook_name) != None:
-            gensr_args += ' -p {}'.format(self.get_option('become_playbook') or self.playbook_name)
-        if (self.get_option('become_task') or self.task_name) != None:
-            gensr_args += ' -t {}'.format(self.get_option('become_task') or self.task_name)
+        gensr_args += ' -p "{}"'.format(self.task_name)
+        gensr_args += ' -t "{}"'.format(self._id)
         
         gensr_exe = '{} generate'.format(self.get_option('gensr_exe') or '/usr/bin/gensr')
 
