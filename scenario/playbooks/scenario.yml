@@ -1,0 +1,60 @@
+---
+- name: Ansible Playbook to Install and Setup Apache on Ubuntu
+  hosts: webserver
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Install latest version of Apache
+      ansible.builtin.apt:
+        name: apache2
+        update_cache: true
+        state: present
+
+    - name: Create document root for domain configured in host variable
+      ansible.builtin.file:
+        path: "/var/www/{{ http_host }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: '0775'
+
+    - name: Deploy website source code
+      ansible.builtin.import_tasks: "{{ tasks_dir }}/deploy-website.yml"
+
+    - name: Set up virtualHost
+      ansible.builtin.template:
+        src: "{{ template_dir }}/apache-template.conf.j2"
+        dest: "/etc/apache2/sites-available/{{ http_conf }}"
+        owner: www-data
+        group: www-data
+        mode: '0644'
+
+    - name: Enable site
+      ansible.builtin.command: a2ensite {{ http_conf }}
+      notify: Restart-apache
+      args:
+        creates: "/etc/apache2/sites-enabled/{{ http_conf }}"
+
+    - name: Open port 80
+      ansible.builtin.import_role:
+        name: mallory_net_input
+      vars:
+        mallory_net_input_protocol: tcp
+        mallory_net_input_port: 80
+        mallory_net_input_state: accepting
+
+  handlers:
+    - name: Restart-apache
+      ansible.builtin.service:
+        name: apache2
+        state: restarted
+- name: Test Apache2
+  connection: local
+  hosts: localhost
+  become: false
+  tasks:
+    - name: Test Apache2
+      ansible.builtin.uri:
+        url: "http://{{ ansible_host }}/index.html"
+        status_code: 200
+  ignore_errors: true

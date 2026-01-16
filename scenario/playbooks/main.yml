@@ -1,0 +1,61 @@
+---
+- name: Create ssh key
+  import_playbook: "{{ playbook_dir }}/util/create-sshkey.yml"
+
+- name: Start docker
+  import_playbook: "{{ playbook_dir }}/util/start-docker.yml"
+
+- name: Install RootAsRole
+  hosts: docker
+  connection: ssh
+  become: false
+  roles:
+    - rootasrole
+  vars:
+    rootasrole_command: "install"
+    rootasrole_branch: "main"
+    rootasrole_sr_password: "no"
+    rootasrole_debug: true
+- name: Install Capable
+  hosts: docker
+  connection: ssh
+  become: false
+  roles: 
+    - rootasrole
+  vars:
+    rootasrole_command: "install capable"
+    rootasrole_branch: "main"
+
+- name: Install gensr
+  hosts: docker
+  connection: ssh
+  become: false
+  roles:
+    - rootasrole
+  vars:
+    rootasrole_command: "install gensr"
+    rootasrole_branch: "main"
+
+- name: Deploy RootAsRole roles for Ansible
+  hosts: docker
+  gather_facts: false
+  tasks:
+    - name: Deploy RootAsRole roles for Ansible
+      ansible.builtin.import_tasks: "{{ tasks_dir }}/deploy_sr_roles.yml"
+
+- name: Perform the scenario with Capable
+  ansible.builtin.import_playbook: "{{ playbook_dir }}/scenario.yml"
+
+- name: Read RootAsRole generated policy
+  hosts: docker
+  gather_facts: false
+  tasks:
+    - name: Get RootAsRole policy contents
+      become: true
+      ansible.builtin.fetch:
+        src: /tmp/capable_output.json
+        dest: result.json
+        flat: true
+    - name: Print RootAsRole policy contents
+      ansible.builtin.debug:
+        msg: "{{ lookup('file', 'result.json') }}"

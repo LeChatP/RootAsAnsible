@@ -1,0 +1,50 @@
+---
+- name: Configure Docker
+  hosts: localhost
+  connection: local
+  become: true
+  become_method: ansible.builtin.sudo
+  tasks:
+    - name: Docker Network
+      community.docker.docker_network:
+        name: RootAsAnsibleNetwork
+        state: present
+        ipam_config:
+          - subnet: "{{ ansible_network }}/{{ ansible_netmask }}"
+            gateway: "{{ ansible_gateway }}"
+    - name: Create image
+      ansible.builtin.template:
+        src: "{{ item }}"
+        dest: "{{ inventory_dir }}/Dockerfile"
+        owner: "root"
+        group: "root"
+        mode: '0644'
+      vars:
+        item: '{{ template_dir }}/Dockerfile.j2'
+    - name: Build image
+      community.docker.docker_image:
+        name: rootasansible
+        build:
+          path: "{{ inventory_dir }}"
+        source: build
+        force_source: true
+        state: present
+    - name: Start container
+      community.docker.docker_container:
+        name: rootasansiblecontainer
+        image: rootasansible
+        state: started
+        capabilities:
+          - NET_ADMIN
+          - BPF
+          - SYS_RESOURCE
+          - SYS_PTRACE
+          - SYS_ADMIN
+          - SETPCAP
+          - DAC_READ_SEARCH
+        expose:
+          - "22"
+          - "80"
+        networks:
+          - name: RootAsAnsibleNetwork
+            ipv4_address: "{{ webserver_ip }}"

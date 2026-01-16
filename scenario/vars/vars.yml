@@ -1,0 +1,4 @@
+template_dir: "{{ lookup('env', 'PWD') }}/templates"
+tasks_dir: "{{ lookup('env', 'PWD') }}/tasks"
+scenario_dir: "{{ lookup('env', 'PWD') }}/playbooks/scenario"
+roles_dir: "{{ lookup('env', 'PWD') }}/roles"

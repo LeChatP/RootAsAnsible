@@ -3,3 +3,5 @@
 
 *.pyc
 inventory/Dockerfile
+
+build/
