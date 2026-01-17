@@ -68,7 +68,7 @@ def inject_uuids(playbook_dir):
                     break
         
         modified = False
-        hashed = hashlib.sha224(os.path.basename(abs_path).encode()).hexdigest()
+        role_name = os.path.relpath(abs_path, os.path.abspath(playbook_dir))
 
         def process_tasks(tasks, current_context_become):
             task_modified = False
@@ -128,7 +128,7 @@ def inject_uuids(playbook_dir):
                         continue
                         
                     unique_id = str(uuid.uuid4())
-                    new_flags = f"{current_flags} -r {hashed} -t {unique_id}".strip()
+                    new_flags = f"{current_flags} -r {role_name} -t {unique_id}".strip()
                     task['become_flags'] = new_flags
                     task_modified = True
             
@@ -190,13 +190,15 @@ def inject_uuids(playbook_dir):
                                  if os.path.isdir(c):
                                      role_tasks = os.path.join(c, 'tasks', 'main.yml')
                                      process_file(role_tasks, role_become)
+                                     role_handlers = os.path.join(c, 'handlers', 'main.yml')
+                                     process_file(role_handlers, role_become)
                                      break
                 
                 # Process tasks sections
                 # If play has become_method, we might want to avoid modifications?
                 # The prompt implies we want to inject when valid.
                 if not play.get('become_method'):
-                    for section in ['pre_tasks', 'tasks', 'post_tasks']:
+                    for section in ['pre_tasks', 'tasks', 'post_tasks', 'handlers']:
                         if section in play:
                              if process_tasks(play[section], p_become):
                                  modified = True
