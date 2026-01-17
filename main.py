@@ -294,6 +294,7 @@ def main():
     # set pwd to build dir
     os.environ['PWD'] = os.path.abspath(build_dir)
     os.environ['ANSIBLE_TIMEOUT'] = "120"
+    os.environ['ANSIBLE_BECOME_METHOD'] = "capable"
     
     try:
         subprocess.run(

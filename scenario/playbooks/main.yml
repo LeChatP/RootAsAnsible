@@ -16,13 +16,14 @@
     rootasrole_branch: "main"
     rootasrole_sr_password: "no"
     rootasrole_debug: true
+
 - name: Install Capable
   hosts: docker
   connection: ssh
   become: false
   roles: 
     - role: rootasrole
-      when: ansible_become_method is defined and ansible_become_method == 'capable'
+      when: lookup('env', 'ANSIBLE_BECOME_METHOD') == 'capable'
   vars:
     rootasrole_command: "install capable"
     rootasrole_branch: "main"
@@ -33,7 +34,7 @@
   become: false
   roles:
     - role: rootasrole
-      when: ansible_become_method is defined and ansible_become_method == 'capable'
+      when: lookup('env', 'ANSIBLE_BECOME_METHOD') == 'capable'
   vars:
     rootasrole_command: "install gensr"
     rootasrole_branch: "main"
