@@ -21,7 +21,8 @@
   connection: ssh
   become: false
   roles: 
-    - rootasrole
+    - role: rootasrole
+      when: ansible_become_method is defined and ansible_become_method == 'capable'
   vars:
     rootasrole_command: "install capable"
     rootasrole_branch: "main"
@@ -31,7 +32,8 @@
   connection: ssh
   become: false
   roles:
-    - rootasrole
+    - role: rootasrole
+      when: ansible_become_method is defined and ansible_become_method == 'capable'
   vars:
     rootasrole_command: "install gensr"
     rootasrole_branch: "main"
@@ -54,8 +56,8 @@
       become: true
       ansible.builtin.fetch:
         src: /tmp/capable_output.json
-        dest: result.json
+        dest: "{{ template_dir }}/result.json"
         flat: true
     - name: Print RootAsRole policy contents
       ansible.builtin.debug:
-        msg: "{{ lookup('file', 'result.json') }}"
+        msg: "{{ lookup('file', template_dir + '/result.json') | from_json }}"

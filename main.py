@@ -1,11 +1,35 @@
 import os
 import shutil
 import uuid
-import json
 import subprocess
-import re
 import yaml
-import hashlib
+import logging
+
+class ColoredFormatter(logging.Formatter):
+    grey = "\x1b[38;20m"
+    blue = "\x1b[38;5;39m"
+    green = "\x1b[32;20m"
+    yellow = "\x1b[33;20m"
+    red = "\x1b[31;20m"
+    bold_red = "\x1b[31;1m"
+    reset = "\x1b[0m"
+
+    def format(self, record):
+        if record.levelno == logging.DEBUG:
+            prefix = self.grey
+        elif record.levelno == logging.INFO:
+            prefix = self.blue
+        elif record.levelno == logging.WARNING:
+            prefix = self.yellow
+        elif record.levelno == logging.ERROR:
+            prefix = self.red
+        elif record.levelno == logging.CRITICAL:
+            prefix = self.bold_red
+        else:
+            prefix = self.reset
+            
+        formatter = logging.Formatter(prefix + "%(asctime)s - %(levelname)s" + self.reset + " - %(message)s")
+        return formatter.format(record)
 
 def inject_uuids(playbook_dir):
     '''
@@ -46,7 +70,7 @@ def inject_uuids(playbook_dir):
             with open(abs_path, 'r') as f:
                 data = yaml.safe_load(f)
         except Exception as e:
-            # print(f"Skipping {abs_path}: {e}")
+            logging.warning(f"Skipping {abs_path}: {e}")
             return
 
         if not isinstance(data, list):
@@ -230,25 +254,41 @@ def inject_uuids(playbook_dir):
         files_to_visit.append(playbook_dir)
 
     for full_path in files_to_visit:
-        print(f"Processing {full_path}...")
+        logging.debug(f"Processing {full_path}...")
         process_file(full_path, False)
 
 
 def main():
+    # Setup logging with colors
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    # Remove default handlers if any
+    if logger.hasHandlers():
+        logger.handlers.clear()
+    
+    handler = logging.StreamHandler()
+    handler.setFormatter(ColoredFormatter())
+    logger.addHandler(handler)
+
     workdir_scenario = "scenario"
     build_dir = "build"
     
     if os.path.exists(build_dir):
         shutil.rmtree(build_dir)
-        
-    print("Vendoring...")
+    
+    logging.info("🚀 Welcome to the RootAsAnsible demonstration!")
+    logging.info("ℹ️  This demo illustrates the MAPE-K fully automated loop.")
+    logging.info("   Goal: Generate least-privilege policies observing a dry-run.")
+    
+    logging.info("📦 Vendoring 'scenario' directory to 'build'...")
     # Copy content of scenario to build/
     shutil.copytree(workdir_scenario, build_dir)
 
-    print("Injecting UUIDs...")
+    logging.info("💉 Injecting UUIDs into playbooks for tracking...")
     inject_uuids(build_dir)
     
-    print("Running playbook to generate result.json...")
+    logging.info("🏗️  Step 1: Running playbook with 'capable' to generate policy...")
+    logging.info("   (This involves building Docker images and compiling dependencies. Please provide sudo password when prompted.)")
     vendored_playbook = os.path.join("playbooks", "main.yml")
 
     # set pwd to build dir
@@ -257,14 +297,34 @@ def main():
     
     try:
         subprocess.run(
-            ["ansible-playbook", vendored_playbook, "-vvvvvv", "-i", "inventory/hosts.yml", "-e", "@vars/vars.yml", "--become-method", "capable", "-K"],
+            ["ansible-playbook", vendored_playbook, "-i", "inventory/hosts.yml", "-e", "@vars/vars.yml", "--become-method", "capable", "-K"],
             check=True,
             cwd=build_dir
         )
     except subprocess.CalledProcessError as e:
-        print(f"Playbook execution failed: {e}")
+        logging.error(f"❌ Playbook execution failed: {e}")
+        return
+    logging.info("🎉 Success! The RootAsRole policy was generated in 'templates/result.json'.")
+    
+    ## STEP 2 & 3
+    logging.info("🛡️  Step 2 & 3: Policy Review and Integration (Simulated).")
+    logging.info("   The policy from Step 1 would effectively be reviewed and merged.")
+    
+    ## STEP 4
+    logging.info("🎬 Step 4: Enforcing policy with 'dosr'...")
+    logging.info("   Re-running playbook to execute tasks with restricted privileges.")
+    
+    try:
+        subprocess.run(
+            ["ansible-playbook", vendored_playbook, "-i", "inventory/hosts.yml", "-e", "@vars/vars.yml", "--become-method", "dosr", "-K"],
+            check=True,
+            cwd=build_dir
+        )
+    except subprocess.CalledProcessError as e:
+        logging.error(f"❌ Playbook execution failed: {e}")
         return
     
+    logging.info("✅ Demonstration completed successfully!")
 
 if __name__ == "__main__":
     main()
