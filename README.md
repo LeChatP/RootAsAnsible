@@ -1,8 +1,12 @@
 # RootAsAnsible
 
+**Artifact Submission for Prix Artefact GDR Sécurité 2026**
+
 This project demonstrates the integration of **RootAsRole** with Ansible, enabling **Least Privilege** management and enforcement for Ansible playbooks.
 
 It bridges the gap between Ansible's automation and granular permission control on Linux systems.
+
+In this demonstration, you will set up an automated scenario by executing the `main.py` script. In a simulated Ansible deployment environment using containers, you will deploy a website. The deployment playbook utilizes a third-party Ansible role that is normally supposed to set up firewall rules but will actually be a Supply Chain attack. We demonstrate that the environment we developed allows generating an Ansible deployment playbook that resists this attack, unlike the current Ansible version using `sudo`. For more info see the ESORICS article.
 
 ## Overview
 
@@ -46,9 +50,11 @@ Note: `bpftool` includes submodules like `libbpf` which are also pinned within i
 
 ## Prerequisites
 
-* **Ansible** (2.8+)
-* **Docker** (for the demo scenario)
-* **Python** (for running the PoC)
+*   **Linux Host**: x86_64, Kernel $\ge$ 5.0
+*   **Ansible Core**: 2.16+
+*   **Docker Engine**: v25+
+*   **Python**: 3.12+
+*   **Hardware**: Minimum 2 vCPUs, 8GB RAM, and 40GB free disk space (to accommodate the containerized environment and compilation).
 
 ## What does the Demo do?
 
@@ -68,5 +74,49 @@ The demo is following the MAPE-K loop:
    ```
 2. Start the demo:
    ```bash
-   python main.py --discover --enforce
+   python3 main.py --discover --enforce
    ```
+
+   The script accepts two optional flags:
+   *   `--discover`: Runs Phase 1 (Privilege Discovery).
+   *   `--enforce`: Runs Phase 2 (Least Privilege Enforcement).
+   
+   If both flags are provided, the script executes the full workflow sequentially. Note: the enforcement phase depends on the discovery phase to setup the environment correctly.
+
+## Detailed Workflow
+
+The demo follows a structured process:
+
+1.  **Environment Setup**: Initializes the test environment by vendoring dependencies and creating local Docker containers.
+2.  **Learning Phase**: Runs the playbook with `ansible_become_method=capable`. It verifies the generation of a `result.json` policy file, confirming that granular permissions were automatically extracted.
+3.  **Policy Planification**: Edits the generated policy to produce a valid enforcement policy (fixing user/group identifiers, sanitizing paths).
+4.  **Attack Simulation**:
+    *   **Vulnerable Execution**: Runs the scenario with standard `sudo`. Confirms that a supply-chain attack (exfiltrating `/etc/shadow`) succeeds.
+    *   **Secured Execution**: Runs the scenario with **RootAsAnsible** (`dosr`). Confirms that the malicious task fails due to lack of privileges, while legitimate tasks proceed.
+
+## Check
+
+To validate the results against the paper's claims:
+
+**Claim 1: Automated Discovery**
+*   After the "Learning Phase", ensure that the `result.json` file has been created.
+*   Inspect the JSON content to confirm it contains fine-grained permissions (specific capabilities, file paths) rather than a blanket root access.
+
+**Claim 2: Least Privilege Enforcement**
+*   **Vulnerable Execution**: Verify in the logs that the task named "Make it persistent" succeeded when run with `sudo`. The password file (`/etc/shadow`) should be present in the build/templates/sudo_shadow file.
+*   **Secured Execution**: Verify that the same "Make it persistent" **FAILED** when run with `dosr`. The Ansible output should report an error (e.g., `"Permission denied"`), confirming the attack was blocked. Also check that the `/etc/shadow` file is **NOT** present in the build/templates/dosr_shadow file.
+*   **Functionality**: Confirm that legitimate tasks (e.g., "Install apache2") succeeded in the `dosr` run, proving that legitimate functionality is preserved.
+
+## Reuse
+
+To apply RootAsAnsible to your own playbooks:
+
+1.  Modify the `scenario.yml` playbook in the `playbooks/` directory to push your own tasks.
+2.  Modify the `main.py` script to simulate the policy modification step (policy refinement is currently a manual/scripted step).
+3.  Run the `main.py` script to execute both learning and enforcement phases.
+
+## Limitations
+
+*   **Dynamic Analysis**: The learning mode only observes privileges for executed code paths. Conditional tasks skipped during training won't be covered in the policy.
+*   **Policy Refinement**: The generated policy requires manual review and adjustment (e.g., fixing specific user IDs) before enforcement.
+*   **Vendoring**: Task labeling relies on specific assumptions; complex playbooks might require manual adjustments for correct policy generation.
