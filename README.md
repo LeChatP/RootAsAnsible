@@ -49,6 +49,20 @@ Run your playbook using the `capable` become method to generate the policy.
 ansible-playbook main.yml -e "ansible_become_method=capable"
 ```
 
+## Reproducibility
+
+The following artifacts are pinned to specific versions:
+
+| Component          | Version | Repository URL                                    | Commit ID                                  | SWHID                                                |
+|--------------------|---------|---------------------------------------------------|--------------------------------------------|------------------------------------------------------|
+| RootAsRole         | `3.3.2` | https://github.com/LeChatP/RootAsRole.git         | `5dfa43ca6e2551cd961348664a075ca47b1644e5` | `swh:1:rev:5dfa43ca6e2551cd961348664a075ca47b1644e5` |
+| RootAsRole-capable | `3.0.0` | https://github.com/LeChatP/RootAsRole-capable.git | `8fb13559dc9698e2f181756aa6aaa2646e2a85f3` | `swh:1:rev:8fb13559dc9698e2f181756aa6aaa2646e2a85f3` |
+| RootAsRole-gensr   | `0.2.0` | https://github.com/LeChatP/RootAsRole-utils.git   | `d8e4b2a943af8b000a6086bcc108a46124357671` | `swh:1:rev:d8e4b2a943af8b000a6086bcc108a46124357671` |
+| bpftool            | `v7.6.0-74-g5386cfc`| https://github.com/libbpf/bpftool.git             | `5386cfcc1361cec24d51c634f76564e0762d2e22` | `swh:1:rev:5386cfcc1361cec24d51c634f76564e0762d2e22` |
+
+Note: `bpftool` includes submodules like `libbpf` which are also pinned within its tree at the revision above.
+
+
 ### 3. Execution with Least Privilege
 Run your playbook using the `dosr` become method, referencing the defined policies.
 ```yaml
@@ -73,9 +87,9 @@ Before doing the scenario, the demo will install several depedencies including R
 
 The demo is following the MAPE-K loop:
 1. **Monitor**: Uses Ansible with the `capable` plugin to monitor what permissions are needed when running a playbook that installs and configures Apache.
-2. **Analyze**: Adjusts Generates a RootAsRole policy based on the collected data.
+2. **Analyze**: Generates a RootAsRole policy based on the collected data.
 3. **Plan**: Deploy the generated policy to the target system using the `rootasrole` Ansible role.
-4. **Execute**: Runs the same Ansible playbook using the `dosr` plugin to enforce least privilege.
+4. **Execute**: Runs the scenario first with `sudo` to demonstrate a successful attack (leaking `/etc/shadow`), then runs the same playbook using the `dosr` plugin to enforce least privilege and prevent the attack.
 
 ## How to run the Demo
 1. Clone the repository:
@@ -89,5 +103,5 @@ The demo is following the MAPE-K loop:
    ```
 3. Start the demo:
    ```bash
-   python demo.py
+   python main.py --discover --enforce
    ```
