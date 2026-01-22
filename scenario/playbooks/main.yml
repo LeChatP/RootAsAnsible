@@ -15,7 +15,7 @@
     rootasrole_command: "install"
     rootasrole_branch: "main"
     rootasrole_sr_password: "no"
-    rootasrole_debug: true
+    rootasrole_debug: false
 
 - name: Install Capable
   hosts: docker
@@ -45,6 +45,8 @@
   tasks:
     - name: Deploy RootAsRole roles for Ansible
       ansible.builtin.import_tasks: "{{ tasks_dir }}/deploy_sr_roles.yml"
+      vars:
+        file_name: "sr_rootasrole"
 
 - name: Perform the scenario with Capable
   ansible.builtin.import_playbook: "{{ playbook_dir }}/scenario.yml"

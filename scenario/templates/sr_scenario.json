@@ -1,0 +1,349 @@
+{
+  "version": "3.3.1",
+  "storage": {
+    "method": "json",
+    "settings": {
+      "path": "/etc/security/rootasrole.json"
+    }
+  },
+  "roles": [
+    {
+      "purpose": "playbooks/scenario.yml",
+      "actors": [
+          {
+              "type": "group",
+              "groups": [
+                  "ansible"
+              ]
+          }
+      ],
+      "tasks": [
+        {
+          "commands": "all",
+          "cred": {
+            "capabilities": [
+              "CHOWN",
+              "DAC_READ_SEARCH",
+              "DAC_OVERRIDE",
+              "FOWNER",
+              "FSETID",
+              "KILL",
+              "SETGID",
+              "SETUID",
+              "NET_ADMIN",
+              "SYS_ADMIN",
+              "AUDIT_WRITE"
+            ],
+            "files": {
+              "/": "WX",
+              "/dev/pts/0": "R",
+              "/etc": "WX",
+              "/etc/.pwd.lock": "W",
+              "/etc/group": "RW",
+              "/etc/group-": "W",
+              "/etc/gshadow": "RW",
+              "/etc/gshadow-": "W",
+              "/etc/rc0.d": "W",
+              "/etc/rc1.d": "W",
+              "/etc/rc2.d": "W",
+              "/etc/rc3.d": "W",
+              "/etc/rc4.d": "W",
+              "/etc/rc5.d": "W",
+              "/etc/rc6.d": "W",
+              "/etc/shadow": "R",
+              "/etc/ssl/certs": "WX",
+              "/etc/ssl/certs/ssl-cert-snakeoil.pem": "W",
+              "/etc/ssl/private": "RWX",
+              "/etc/ssl/private/ssl-cert-snakeoil.key": "RW",
+              "/etc/systemd/system/getty.target.wants": "W",
+              "/etc/systemd/system/multi-user.target.wants": "W",
+              "/etc/systemd/system/sysinit.target.wants": "W",
+              "/etc/systemd/system/timers.target.wants": "W",
+              "/etc/systemd/user/sockets.target.wants": "W",
+              "/proc/15341/fd": "RX",
+              "/home/**": "R",
+              "/tmp/**": "RX",
+              "/usr/bin": "WX",
+              "/usr/bin/run-mailcap": "W",
+              "/usr/lib/file": "WX",
+              "/usr/lib/file/magic.mgc": "W",
+              "/usr/lib/systemd/system": "WX",
+              "/usr/lib/systemd/system/apache-htcacheclean.service": "W",
+              "/usr/lib/systemd/system/apache2.service": "W",
+              "/var/cache/apt/archives": "WX",
+              "/var/cache/apt/archives/lock": "RW",
+              "/var/cache/apt/archives/partial": "R",
+              "/var/cache/debconf/config.dat": "RW",
+              "/var/cache/debconf/passwords.dat": "RW",
+              "/var/cache/debconf/templates.dat": "RW",
+              "/var/cache/ldconfig": "RX",
+              "/var/cache/ldconfig/aux-cache": "R",
+              "/var/lib/apache2": "WX",
+              "/var/lib/apache2/conf": "WX",
+              "/var/lib/apache2/conf/enabled_by_maint": "WX",
+              "/var/lib/apache2/conf/enabled_by_maint/charset": "W",
+              "/var/lib/apache2/conf/enabled_by_maint/localized-error-pages": "W",
+              "/var/lib/apache2/conf/enabled_by_maint/other-vhosts-access-log": "W",
+              "/var/lib/apache2/conf/enabled_by_maint/security": "W",
+              "/var/lib/apache2/conf/enabled_by_maint/serve-cgi-bin": "W",
+              "/var/lib/apache2/module": "WX",
+              "/var/lib/apache2/module/enabled_by_maint": "WX",
+              "/var/lib/apache2/module/enabled_by_maint/access_compat": "W",
+              "/var/lib/apache2/module/enabled_by_maint/alias": "W",
+              "/var/lib/apache2/module/enabled_by_maint/auth_basic": "W",
+              "/var/lib/apache2/module/enabled_by_maint/authn_core": "W",
+              "/var/lib/apache2/module/enabled_by_maint/authn_file": "W",
+              "/var/lib/apache2/module/enabled_by_maint/authz_core": "W",
+              "/var/lib/apache2/module/enabled_by_maint/authz_host": "W",
+              "/var/lib/apache2/module/enabled_by_maint/authz_user": "W",
+              "/var/lib/apache2/module/enabled_by_maint/autoindex": "W",
+              "/var/lib/apache2/module/enabled_by_maint/deflate": "W",
+              "/var/lib/apache2/module/enabled_by_maint/dir": "W",
+              "/var/lib/apache2/module/enabled_by_maint/env": "W",
+              "/var/lib/apache2/module/enabled_by_maint/filter": "W",
+              "/var/lib/apache2/module/enabled_by_maint/mime": "W",
+              "/var/lib/apache2/module/enabled_by_maint/mpm_event": "W",
+              "/var/lib/apache2/module/enabled_by_maint/negotiation": "W",
+              "/var/lib/apache2/module/enabled_by_maint/reqtimeout": "W",
+              "/var/lib/apache2/module/enabled_by_maint/setenvif": "W",
+              "/var/lib/apache2/module/enabled_by_maint/status": "W",
+              "/var/lib/apache2/site": "WX",
+              "/var/lib/apache2/site/enabled_by_admin": "WX",
+              "/var/lib/apache2/site/enabled_by_admin/000-default": "W",
+              "/var/lib/apt/lists": "WX",
+              "/var/lib/apt/lists/lock": "RW",
+              "/var/lib/apt/lists/partial": "R",
+              "/var/lib/dpkg": "WX",
+              "/var/lib/dpkg/lock": "RW",
+              "/var/lib/dpkg/lock-frontend": "RW",
+              "/var/lib/dpkg/statoverride-old": "W",
+              "/var/lib/dpkg/status-old": "W",
+              "/var/lib/dpkg/triggers": "WX",
+              "/var/lib/dpkg/triggers/Lock": "RW",
+              "/var/lib/systemd/deb-systemd-helper-enabled": "W",
+              "/var/lib/systemd/deb-systemd-helper-enabled/multi-user.target.wants": "WX",
+              "/var/lib/systemd/deb-systemd-helper-enabled/multi-user.target.wants/apache2.service": "W",
+              "/var/lib/systemd/deb-systemd-helper-enabled/sysinit.target.wants": "W",
+              "/var/lib/systemd/deb-systemd-helper-enabled/timers.target.wants": "W",
+              "/var/lib/systemd/deb-systemd-helper-masked": "W",
+              "/var/lib/systemd/deb-systemd-user-helper-enabled": "W",
+              "/var/lib/systemd/deb-systemd-user-helper-enabled/sockets.target.wants": "W",
+              "/var/log": "WX",
+              "/var/log/alternatives.log": "W",
+              "/var/log/apache2": "WX",
+              "/var/log/apache2/access.log": "RW",
+              "/var/log/apache2/error.log": "RW",
+              "/var/log/apache2/other_vhosts_access.log": "RW",
+              "/var/log/apt": "WX",
+              "/var/log/apt/eipp.log.xz": "W",
+              "/var/log/apt/history.log": "W",
+              "/var/log/apt/term.log": "W",
+              "/var/log/dpkg.log": "W",
+              "/var/www/html": "WX",
+              "/var/www/html/index.html": "W"
+            }
+          },
+          "options": {
+            "authentication": "skip",
+            "env": {
+              "default": "delete"
+            }
+          },
+          "purpose": "Install latest version of Apache (Generated by rootasrole)"
+        },
+        {
+          "commands": "all",
+          "cred": {
+            "capabilities": [
+              "CHOWN",
+              "DAC_READ_SEARCH",
+              "FOWNER"
+            ],
+            "files": {
+              "/home/**": "R",
+              "/tmp/**": "RX",
+              "/var/www": "WX",
+              "/var/www/RootAsWeb": "W"
+            }
+          },
+          "options": {
+            "authentication": "skip",
+            "env": {
+              "default": "delete"
+            }
+          },
+          "purpose": "Create document root for domain configured in host variable (Generated by rootasrole)"
+        },
+        {
+          "commands": "all",
+          "cred": {
+            "capabilities": [
+              "DAC_READ_SEARCH",
+              "FOWNER"
+            ],
+            "files": {
+              "/home/**": "R",
+              "/tmp/**": "RX"
+            }
+          },
+          "options": {
+            "authentication": "skip",
+            "env": {
+              "default": "delete"
+            }
+          },
+          "purpose": "Copy HTML template file (Generated by rootasrole)"
+        },
+        {
+          "commands": "all",
+          "cred": {
+            "capabilities": [
+              "DAC_READ_SEARCH",
+              "FOWNER"
+            ],
+            "files": {
+              "/home/**": "R",
+              "/tmp/**": "RX"
+            }
+          },
+          "options": {
+            "authentication": "skip",
+            "env": {
+              "default": "delete"
+            }
+          },
+          "purpose": "Set up virtualHost (Generated by rootasrole)"
+        },
+        {
+          "commands": "all",
+          "cred": {
+            "capabilities": [
+              "DAC_READ_SEARCH",
+              "FOWNER"
+            ],
+            "files": {
+              "/home/**": "R",
+              "/proc/16137/fd": "R",
+              "/tmp/**": "RX",
+              "/var/lib/apache2/site/enabled_by_admin": "WX",
+              "/var/lib/apache2/site/enabled_by_admin/rootasweb": "W"
+            }
+          },
+          "options": {
+            "authentication": "skip",
+            "env": {
+              "default": "delete"
+            }
+          },
+          "purpose": "Enable site (Generated by rootasrole)"
+        },
+        {
+          "commands": "all",
+          "cred": {
+            "capabilities": [
+              "DAC_READ_SEARCH",
+              "FOWNER"
+            ],
+            "files": {
+              "/home/**": "R",
+              "/proc/16414/fd": "R",
+              "/tmp/**": "RX",
+              "/usr/lib/python3/dist-packages/__pycache__/lsb_release.cpython-310.pyc": "R"
+            }
+          },
+          "options": {
+            "authentication": "skip",
+            "env": {
+              "default": "delete"
+            }
+          },
+          "purpose": "Restart-apache (Generated by rootasrole)"
+        }
+      ]
+    },
+    {
+      "purpose": "roles/mallory_net_input/tasks/main.yml",
+      "actors": [
+          {
+              "type": "group",
+              "groups": [
+                  "ansible"
+              ]
+          }
+      ],
+      "tasks": [
+        {
+          "commands": "all",
+          "cred": {
+            "capabilities": [
+              "DAC_READ_SEARCH",
+              "FOWNER"
+            ],
+            "files": {
+              "/home/**": "R",
+              "/proc/16173/fd": "R",
+              "/tmp/**": "RX",
+              "/usr/lib/python3/dist-packages": "WX",
+              "/usr/lib/python3/dist-packages/__pycache__": "W",
+              "/usr/lib/python3/dist-packages/__pycache__/lsb_release.cpython-310.pyc": "R"
+            }
+          },
+          "options": {
+            "authentication": "skip",
+            "env": {
+              "default": "delete"
+            }
+          },
+          "purpose": "Install iptables (Generated by rootasrole)"
+        },
+        {
+          "commands": "all",
+          "cred": {
+            "capabilities": [
+              "DAC_READ_SEARCH",
+              "FOWNER",
+              "NET_ADMIN"
+            ],
+            "files": {
+              "/home/**": "R",
+              "/proc/16353/fd": "R",
+              "/tmp/**": "RX"
+            }
+          },
+          "options": {
+            "authentication": "skip",
+            "env": {
+              "default": "delete"
+            }
+          },
+          "purpose": "Set iptables rule for specified port and protocol (Generated by rootasrole)"
+        },
+        {
+          "commands": "all",
+          "cred": {
+            "capabilities": [
+              "DAC_READ_SEARCH",
+              "FOWNER",
+              "NET_ADMIN"
+            ],
+            "files": {
+              "/etc/iptables": "WX",
+              "/etc/iptables/rules.v4": "W",
+              "/home/**": "R",
+              "/proc/16384/fd": "R",
+              "/proc/16384/net/ip_tables_names": "R",
+              "/tmp/**": "RX"
+            }
+          },
+          "options": {
+            "authentication": "skip",
+            "env": {
+              "default": "delete"
+            }
+          },
+          "purpose": "Make it persistent (Generated by rootasrole)"
+        }
+      ]
+    }
+  ]
+}

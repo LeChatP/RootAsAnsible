@@ -1,0 +1,9 @@
+[submodule "scenario/artifacts/RootAsRole"]
+	path = scenario/artifacts/RootAsRole
+	url = https://github.com/LeChatP/RootAsRole
+[submodule "scenario/artifacts/RootAsRole-capable"]
+	path = scenario/artifacts/RootAsRole-capable
+	url = https://github.com/LeChatP/RootAsRole-capable
+[submodule "scenario/artifacts/RootAsRole-gensr"]
+	path = scenario/artifacts/RootAsRole-gensr
+	url = https://github.com/LeChatP/RootAsRole-gensr

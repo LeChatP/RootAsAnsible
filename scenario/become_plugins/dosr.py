@@ -109,26 +109,8 @@ class BecomeModule(BecomeBase):
         ## check if executed files in tmp/ansible-tmp-<timestamp>-<id> directory are owned by the become_user
         for arg in shlex.split(cmd):
           for r in re.findall(r'\/.*ansible-tmp-.*\/', arg):
-              chown_user_cmd += '/usr/bin/dosr -r ansible -t ansible_chown /usr/bin/chown -R "`{cmd} {flag} id -u`":"`{cmd} {flag} id -u`" "{f}"; '.format(cmd=becomecmd,flag=flags,f=r)
-              end_chown += '; /usr/bin/dosr -r ansible -t ansible_chown /usr/bin/chown -R "`id -u`":"`id -u`" "{}" '.format(r)
-        
-        # Automatic task selection for common Ansible modules
-        # This overrides the -t flag passed in become_flags if a specific module is detected
-        match_module = re.search(r'AnsiballZ_([a-z0-9]+)\.py', cmd)
-        if match_module:
-            module_name = match_module.group(1)
-            # Map module name to RootAsRole task name
-            # We assume the policy uses standard names for these: ansible_stat, etc.
-            if module_name in ['stat', 'file', 'copy', 'setup', 'command', 'shell', 'apt', 'service', 'systemd']:
-                 # We inject -t ansible_{module_name}
-                 # We need to replace existing -t if present, or append.
-                 # Actually, dosr command line takes last -t? 
-                 # Let's verify standard behavior. usually last flag wins.
-                 # If not, we have to parse flags.
-                 # Assuming we can just append, but safer to prepend or replace?
-                 # If I append, valid invocation: dosr -r role -t default -t ansible_stat ...
-                 # If dosr takes last, we are good.
-                 flags += ' -t ansible_{}'.format(module_name)
+              chown_user_cmd += '/usr/bin/dosr -r rar_ansible -t ansible_chown /usr/bin/chown -R "`{cmd} {flag} id -u`":"`{cmd} {flag} id -u`" "{f}"; '.format(cmd=becomecmd,flag=flags,f=r)
+              end_chown += '; /usr/bin/dosr -r rar_ansible -t ansible_chown /usr/bin/chown -R "`id -u`":"`id -u`" "{}" '.format(r)
         
         return ' '.join([chown_user_cmd, becomecmd, flags, self._build_success_command(cmd, shell), end_chown])
 

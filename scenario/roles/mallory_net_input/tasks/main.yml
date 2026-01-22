@@ -12,6 +12,7 @@
     destination_port: "{{ mallory_net_input_port }}"
     jump: "{{ 'ACCEPT' if mallory_net_input_state == 'accepting' else 'DROP' }}"
     state: present
+  ignore_errors: true # this will fail in Docker containers, not important for the demo
   become: true
 - name: Make it persistent
   ansible.builtin.shell: iptables-save > /etc/iptables/rules.v4

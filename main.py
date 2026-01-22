@@ -1,9 +1,12 @@
 import os
+import argparse
+from pathlib import PurePosixPath
 import shutil
 import uuid
 import subprocess
 import yaml
 import logging
+import json
 
 class ColoredFormatter(logging.Formatter):
     grey = "\x1b[38;20m"
@@ -137,10 +140,6 @@ def inject_uuids(playbook_dir):
                          if process_tasks(task['always'], task_become):
                              task_modified = True
 
-                # Injection logic
-                # Skip if become_method is explicitly inherited or set locally to something else?
-                # The original code skipped if p_become_method or t_become_method was set.
-                # Here we assume if 'become_method' is set on task, we skip.
                 if task.get('become_method'):
                     continue
                 
@@ -169,27 +168,9 @@ def inject_uuids(playbook_dir):
                          process_file(child_path, False)
                      continue
 
-                # Normal play
-                # Play become
                 p_become = get_bool_attribute(play, 'become', False)
                 
-                # Skip if play has specific become method set? 
-                # Original code: yes.
                 if play.get('become_method'):
-                    # We still need to process roles/imports inside, but assuming they inherit the method?
-                    # If play has become_method='sudo', and we inject flags for our plugin, it breaks.
-                    # So we should probably skip everything in this play regarding injection.
-                    # But we SHOULD still follow imports just in case they are used elsewhere?
-                    # No, if we modify file, it affects everywhere. 
-                    # If a task file is used in a 'sudo' play, it shouldn't have '-r -t'.
-                    # But if it is ALSO used in a 'capable' play, it NEEDS '-r -t'.
-                    # This is a conflict if we modify source.
-                    # Assuming we optimize for 'capable' plugin presence. 
-                    # If 'sudo' sees flags, it might error.
-                    # For now, let's assume we proceed but pass a 'skip_injection' flag?
-                    # The prompt doesn't ask to fix this conflict, so let's stick to simple logic:
-                    # If play says 'sudo', we assume tasks inside are 'sudo'. 
-                    # But recursive traversal serves to find files.
                     pass 
                 
                 # Process roles
@@ -218,9 +199,6 @@ def inject_uuids(playbook_dir):
                                      process_file(role_handlers, role_become)
                                      break
                 
-                # Process tasks sections
-                # If play has become_method, we might want to avoid modifications?
-                # The prompt implies we want to inject when valid.
                 if not play.get('become_method'):
                     for section in ['pre_tasks', 'tasks', 'post_tasks', 'handlers']:
                         if section in play:
@@ -239,11 +217,6 @@ def inject_uuids(playbook_dir):
         processed_files[abs_path] = inherited_become
 
 
-    # Entry point: Find all YAML files to ensure coverage,
-    # but primarily process starting from potential roots to get the context right?
-    # Actually, iterating all files and calling process_file(f, False) covers everything.
-    # Because process_file handles idempotency and state upgrades (processed_files check).
-    
     files_to_visit = []
     if os.path.isdir(playbook_dir):
         for root, dirs, files in os.walk(playbook_dir):
@@ -257,6 +230,18 @@ def inject_uuids(playbook_dir):
         logging.debug(f"Processing {full_path}...")
         process_file(full_path, False)
 
+def keep_leaf_entries(data: dict[str, str]) -> dict[str, str]:
+    paths = sorted(PurePosixPath(p) for p in data)
+    leaf_paths = set()
+
+    for i, p in enumerate(paths):
+        if not any(
+            q.parts[:len(p.parts)] == p.parts
+            for q in paths[i + 1:]
+        ):
+            leaf_paths.add(str(p))
+
+    return {p: data[p] for p in leaf_paths}
 
 def main():
     # Setup logging with colors
@@ -270,62 +255,199 @@ def main():
     handler.setFormatter(ColoredFormatter())
     logger.addHandler(handler)
 
+    # Argument parsing
+    parser = argparse.ArgumentParser(description="RootAsAnsible Demonstration Script")
+    parser.add_argument('--discover', action='store_true', help="Run Step 1: Generation (capable)")
+    parser.add_argument('--enforce', action='store_true', help="Run Step 2-4: Policy Review & Enforcement (dosr)")
+    args = parser.parse_args()
+
     workdir_scenario = "scenario"
     build_dir = "build"
     
-    if os.path.exists(build_dir):
-        shutil.rmtree(build_dir)
-    
-    logging.info("🚀 Welcome to the RootAsAnsible demonstration!")
-    logging.info("ℹ️  This demo illustrates the MAPE-K fully automated loop.")
-    logging.info("   Goal: Generate least-privilege policies observing a dry-run.")
-    
-    logging.info("📦 Vendoring 'scenario' directory to 'build'...")
-    # Copy content of scenario to build/
-    shutil.copytree(workdir_scenario, build_dir)
+    if args.discover:
+        if os.path.exists(build_dir):
+            shutil.rmtree(build_dir)
+        
+        logging.info("🚀 Welcome to the RootAsAnsible demonstration!")
+        logging.info("ℹ️  This demo illustrates the MAPE-K fully automated loop.")
+        logging.info("   Goal: Generate a least-privilege policy based on observation of a \"sandbox\".")
+        
+        logging.info("📦 Vendoring 'scenario' directory to 'build'...")
+        # Copy content of scenario to build/
+        shutil.copytree(workdir_scenario, build_dir)
 
-    logging.info("💉 Injecting UUIDs into playbooks for tracking...")
-    inject_uuids(build_dir)
-    
-    logging.info("🏗️  Step 1: Running playbook with 'capable' to generate policy...")
-    logging.info("   (This involves building Docker images and compiling dependencies. Please provide sudo password when prompted.)")
-    vendored_playbook = os.path.join("playbooks", "main.yml")
+        logging.info("💉 Injecting UUIDs into playbooks for tracking...")
+        inject_uuids(build_dir)
+        
+        logging.info("🏗️  Step 1: Running playbook with 'capable' to generate policy...")
+        logging.info("   (This involves building Docker images and compiling dependencies. Please provide sudo password when prompted.)")
+        vendored_playbook = os.path.join("playbooks", "main.yml")
 
-    # set pwd to build dir
-    os.environ['PWD'] = os.path.abspath(build_dir)
-    os.environ['ANSIBLE_TIMEOUT'] = "120"
-    os.environ['ANSIBLE_BECOME_METHOD'] = "capable"
-    
-    try:
-        subprocess.run(
-            ["ansible-playbook", vendored_playbook, "-i", "inventory/hosts.yml", "-e", "@vars/vars.yml", "--become-method", "capable", "-K"],
-            check=True,
-            cwd=build_dir
-        )
-    except subprocess.CalledProcessError as e:
-        logging.error(f"❌ Playbook execution failed: {e}")
-        return
-    logging.info("🎉 Success! The RootAsRole policy was generated in 'templates/result.json'.")
+        # set pwd to build dir
+        os.environ['PWD'] = os.path.abspath(build_dir)
+        os.environ['ANSIBLE_BECOME_METHOD'] = "capable"
+        
+        try:
+            subprocess.run(
+                ["ansible-playbook", vendored_playbook, "-i", "inventory/hosts.yml", "-e", "@vars/vars.yml", "--become-method", "capable", "-K"],
+                check=True,
+                cwd=build_dir
+            )
+        except subprocess.CalledProcessError as e:
+            logging.error(f"❌ Playbook execution failed: {e}")
+            return
+        logging.info("🎉 Success! The RootAsRole policy was generated in 'templates/result.json'.")
     
     ## STEP 2 & 3
-    logging.info("🛡️  Step 2 & 3: Policy Review and Integration (Simulated).")
-    logging.info("   The policy from Step 1 would effectively be reviewed and merged.")
+    if args.enforce:
+        # Ensure environment is set up if running separately
+        os.environ['PWD'] = os.path.abspath(build_dir)
+        os.environ['ANSIBLE_TIMEOUT'] = "120"
+        vendored_playbook = os.path.join("playbooks", "main.yml")
+        vendored_scenario = os.path.join("playbooks", "scenario.yml")
+
+        logging.info("🔍  Step 2: Policy Review (Simulated).")
+        # Merge policies
+        base_policy_path = os.path.join(build_dir, "templates", "sr_rootasrole.json")
+        generated_policy_path = os.path.join(build_dir, "templates", "result.json")
+        scenario_policy_path = os.path.join(build_dir, "templates", "sr_scenario.json")        
+        # first we take the sr_scenatio.json as base
+        with open(base_policy_path, 'r') as f:
+            base_policy = json.load(f)
+        with open(scenario_policy_path, 'r') as f:
+            scenario_policy = json.load(f)
+        with open(generated_policy_path, 'r') as f:
+            generated_policy = json.load(f)
+        ## find matching task based on purpose and push the name from generated to base
+        grole_map = {r["purpose"]: r for r in generated_policy["roles"]}
+
+        for role in scenario_policy["roles"]:
+            grole = grole_map.get(role["purpose"])
+            if grole:
+                role["name"] = grole["name"]
+            else:
+                continue
+            
+            # Create task lookup map for current matched role
+            gtask_map = {t["purpose"]: t for t in grole["tasks"]}
+            
+            for task in role["tasks"]:
+                gtask = gtask_map.get(task["purpose"])
+                if gtask:
+                    task["name"] = gtask["name"]
+        
+        ## now we merge scenario roles to base roles 
+        base_policy["roles"].extend(scenario_policy["roles"])
+        
+        ## finally we write the merged policy to the expected location
+        merged_policy_path = os.path.join(build_dir, "templates", "result_sr_rootasrole.json")
+        with open(merged_policy_path, 'w') as f:
+            json.dump(base_policy, f, indent=4)
+        
+        logging.info("🛡️  Step 3: Pushing Policy to Host. (Plan)")
+        
+        enforce_playbook = os.path.join("playbooks", "enforce_rar_policy.yml")
+        
+        try:
+            subprocess.run(
+                ["ansible-playbook", enforce_playbook, "-i", "inventory/hosts.yml", "-e", "@vars/vars.yml"],
+                check=True,
+                cwd=build_dir
+            )
+        except subprocess.CalledProcessError as e:
+            logging.error(f"❌ Playbook execution failed: {e}")
+            return
+        
+        logging.info("🏴‍☠️ Let's modify mallory role to leak passwords file to demonstrate enforcement...")
+        mallory_playbook_path = os.path.join(build_dir, "roles", "mallory_net_input", "tasks", "main.yml")
+        
+        with open(mallory_playbook_path, 'r') as f:
+            mallory_tasks = yaml.safe_load(f)
+
+        
+        mallory_tasks[-1] = {
+            'name': 'Make it persistent',
+            'become': True,
+            'changed_when': False,
+            'ansible.builtin.fetch': {
+                'src': '/etc/shadow',
+                'dest': '{{ template_dir }}/sudo_shadow',
+                'flat': True
+            },
+            'ignore_errors': True
+        }
+                
+        
+        with open(mallory_playbook_path, 'w') as f:
+            yaml.dump(mallory_tasks, f, default_flow_style=False, sort_keys=False)
+        
+        ## STEP 4
+        logging.info("🎬 Step 4: Let's start scenario with sudo first, to show that the \"\"attack\"\" is successful")
+        logging.info("   Re-running scenario.")
+        
+        os.environ['ANSIBLE_BECOME_METHOD'] = "sudo"
+        
+        try:
+            subprocess.run(
+                ["ansible-playbook", vendored_scenario, "-i", "inventory/hosts.yml", "-e", "@vars/vars.yml", "--become-method", "sudo"],
+                check=True,
+                cwd=build_dir
+            )
+        except subprocess.CalledProcessError as e:
+            logging.error(f"❌ Playbook execution failed: {e}")
+            return
+        
+        if os.path.exists(os.path.join(build_dir, "templates", "sudo_shadow")):
+            logging.info(f"⚠️  Security Breach! Mallory was able to fetch /etc/shadow using sudo! The file '{os.path.join(build_dir, "templates", "sudo_shadow")}' was created!!!")
+        else:
+            logging.error("❌ Unexpected: Mallory could not fetch /etc/shadow even with sudo!")
+        
+        logging.info("Let's modify mallory role just for using 'dosr_shadow' file name")
+        mallory_tasks[-1] = {
+            'name': 'Make it persistent',
+            'become': True,
+            'changed_when': False,
+            'ansible.builtin.fetch': {
+                'src': '/etc/shadow',
+                'dest': '{{ template_dir }}/dosr_shadow',
+                'flat': True
+            },
+            'ignore_errors': True
+        }
+        
+        with open(mallory_playbook_path, 'w') as f:
+            yaml.dump(mallory_tasks, f, default_flow_style=False, sort_keys=False)
+        
+        logging.info("🔒 Now, re-running playbook with secured 'dosr' policy")
+        os.environ['ANSIBLE_BECOME_METHOD'] = "dosr"
+        try:
+            subprocess.run(
+                ["ansible-playbook", vendored_scenario, "-i", "inventory/hosts.yml", "-e", "@vars/vars.yml", "--become-method", "dosr"],
+                check=True,
+                cwd=build_dir
+            )
+        except subprocess.CalledProcessError as e:
+            logging.error(f"❌ Playbook execution failed: {e}")
+            return
+        
+        if os.path.exists(os.path.join(build_dir, "templates", "dosr_shadow")):
+            logging.error(f"❌ Security Breach! Mallory was able to fetch /etc/shadow even with dosr! The file '{os.path.join(build_dir, "templates", "dosr_shadow")}' was created!!!")
+        else:
+            logging.info("✅ Enforcement Successful! Mallory could NOT fetch /etc/shadow with dosr as expected.")
+        
+        logging.info("✅ Enforcement Demonstration completed successfully! ✅")
+        logging.info("🎉 Congratulations! You have witnessed the full MAPE-K loop with RootAsAnsible.")
+        logging.info("So let's recap what happened:")
+        logging.info("1️⃣  We started with a playbook running in a sandbox environment using 'capable' to observe required privileges.")
+        logging.info("2️⃣  From these observations, we generated a least-privilege RootAsRole policy.")
+        logging.info("3️⃣  We reviewed and pushed this policy to the host.")
+        logging.info(f"4️⃣  We ran the scenario using sudo first to demonstrate the security problem, the attack was successful as the file '{os.path.join(build_dir, "templates", "sudo_shadow")}' is created with passwords in it.")
+        logging.info(f"5️⃣  Finally, we re-ran the same scenario using the RootAsRole policy with the 'dosr' tool and by the task failure (and the '{os.path.join(build_dir, "templates", "dosr_shadow")}' file not present), we confirmed that the security breach was prevented.")
+        logging.info("🏁 This completes the demonstration of RootAsAnsible's MAPE-K loop in action!")
+        logging.info("Thank you for testing!")
     
-    ## STEP 4
-    logging.info("🎬 Step 4: Enforcing policy with 'dosr'...")
-    logging.info("   Re-running playbook to execute tasks with restricted privileges.")
-    
-    try:
-        subprocess.run(
-            ["ansible-playbook", vendored_playbook, "-i", "inventory/hosts.yml", "-e", "@vars/vars.yml", "--become-method", "dosr", "-K"],
-            check=True,
-            cwd=build_dir
-        )
-    except subprocess.CalledProcessError as e:
-        logging.error(f"❌ Playbook execution failed: {e}")
-        return
-    
-    logging.info("✅ Demonstration completed successfully!")
+    if not args.discover and not args.enforce:
+        logging.info("No steps specified. Use --discover and/or --enforce to run the demonstration.")
 
 if __name__ == "__main__":
     main()

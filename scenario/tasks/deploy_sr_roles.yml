@@ -15,7 +15,7 @@
     group: root
     mode: "0400"
   vars:
-    item: '{{ lookup("first_found", dict(files=["../templates/sr_rootasrole.json"], skip=True)) }}'
+    item: '{{ lookup("first_found", dict(files=["../templates/" + file_name + ".json"], skip=True)) }}'
   become: true
   become_method: ansible.builtin.sudo
   failed_when: "item == None"
