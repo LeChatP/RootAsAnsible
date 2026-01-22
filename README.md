@@ -10,7 +10,7 @@ Ansible usually requires full `sudo` (root) access to perform configuration mana
 
 1.  **Auto-Detect Permissions**: Use the `capable` plugin to "learn" what permissions (Linux Capabilities, files, syscalls) a playbook needs by running it in a dry-run/detection mode.
 2.  **Generate Policies**: Automatically create **RootAsRole** policies (Roles and Tasks) based on the detected requirements.
-3.  **Enforce Least Privilege**: Execute Ansible playbooks using the `dosr` (Substitute Role) plugin, ensuring that each task runs with *only* the specific privileges it needs, rather than full root access.
+3.  **Enforce Least Privilege**: Execute Ansible playbooks using the `dosr` (Do Switch Role) plugin, ensuring that each task runs with *only* the specific privileges it needs, rather than full root access.
 
 ## Components
 
@@ -31,24 +31,6 @@ An enforcement plugin. It replaces standard `sudo`.
 - **function**: Executes the Ansible module using the `dosr` command-line tool.
 - **Usage**: You specify which RootAsRole "Role" and "Task" the module corresponds to, and `dosr` switches to that restricted context.
 
-## Usage Workflow
-
-### 1. Installation
-Deploy RootAsRole to your target nodes using the included role.
-```yaml
-- hosts: all
-  roles:
-    - rootasrole
-  vars:
-    rootasrole_command: "install"
-```
-
-### 2. Policy Learning
-Run your playbook using the `capable` become method to generate the policy.
-```bash
-ansible-playbook main.yml -e "ansible_become_method=capable"
-```
-
 ## Reproducibility
 
 The following artifacts are pinned to specific versions:
@@ -61,19 +43,6 @@ The following artifacts are pinned to specific versions:
 | bpftool            | `v7.6.0-74-g5386cfc`| https://github.com/libbpf/bpftool.git             | `5386cfcc1361cec24d51c634f76564e0762d2e22` | `swh:1:rev:5386cfcc1361cec24d51c634f76564e0762d2e22` |
 
 Note: `bpftool` includes submodules like `libbpf` which are also pinned within its tree at the revision above.
-
-
-### 3. Execution with Least Privilege
-Run your playbook using the `dosr` become method, referencing the defined policies.
-```yaml
-- name: Install Apache
-  become: true
-  become_method: dosr
-  become_flags: "-r deploy_apache -t install_apache2"
-  ansible.builtin.apt:
-    name: apache2
-    state: present
-```
 
 ## Prerequisites
 
@@ -97,11 +66,7 @@ The demo is following the MAPE-K loop:
    git clone https://github.com/LeChatP/RootAsAnsible.git
    cd RootAsAnsible
    ```
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Start the demo:
+2. Start the demo:
    ```bash
    python main.py --discover --enforce
    ```
