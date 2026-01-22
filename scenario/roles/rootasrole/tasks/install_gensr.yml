@@ -8,14 +8,12 @@
   environment:
     PATH: '{{ ansible_facts["env"]["PATH"] }}:{{ ansible_facts["env"]["HOME"] }}/.cargo/bin'
 
-- name: Clone gensr repository
+- name: Copy gensr repository from artifacts
   when: gensr_version.rc != 0
-  ansible.builtin.git:
-    repo: 'https://github.com/LeChatP/RootAsRole-utils.git'
+  ansible.posix.synchronize:
+    src: "{{ role_path }}/../../artifacts/RootAsRole-gensr/"
     dest: '/tmp/RootAsRole-utils'
-    clone: true
-    update: true
-    version: "{{ rootasrole_branch }}"
+  become: false
 
 - name: Performing install of gensr
   when: gensr_version.rc != 0

@@ -41,10 +41,10 @@ The following artifacts are pinned to specific versions:
 
 | Component          | Version | Repository URL                                    | Commit ID                                  | SWHID                                                |
 |--------------------|---------|---------------------------------------------------|--------------------------------------------|------------------------------------------------------|
-| RootAsRole         | `3.3.2` | https://github.com/LeChatP/RootAsRole.git         | `5dfa43ca6e2551cd961348664a075ca47b1644e5` | `swh:1:rev:5dfa43ca6e2551cd961348664a075ca47b1644e5` |
-| RootAsRole-capable | `3.0.0` | https://github.com/LeChatP/RootAsRole-capable.git | `8fb13559dc9698e2f181756aa6aaa2646e2a85f3` | `swh:1:rev:8fb13559dc9698e2f181756aa6aaa2646e2a85f3` |
-| RootAsRole-gensr   | `0.2.0` | https://github.com/LeChatP/RootAsRole-utils.git   | `d8e4b2a943af8b000a6086bcc108a46124357671` | `swh:1:rev:d8e4b2a943af8b000a6086bcc108a46124357671` |
-| bpftool            | `v7.6.0-74-g5386cfc`| https://github.com/libbpf/bpftool.git             | `5386cfcc1361cec24d51c634f76564e0762d2e22` | `swh:1:rev:5386cfcc1361cec24d51c634f76564e0762d2e22` |
+| RootAsRole         | `3.3.2` | https://github.com/LeChatP/RootAsRole         | `5dfa43ca6e2551cd961348664a075ca47b1644e5` | `swh:1:rev:5dfa43ca6e2551cd961348664a075ca47b1644e5` |
+| RootAsRole-capable | `3.0.0` | https://github.com/LeChatP/RootAsRole-capable | `8fb13559dc9698e2f181756aa6aaa2646e2a85f3` | `swh:1:rev:8fb13559dc9698e2f181756aa6aaa2646e2a85f3` |
+| RootAsRole-gensr   | `0.2.0` | https://github.com/LeChatP/RootAsRole-gensr   | `d8e4b2a943af8b000a6086bcc108a46124357671` | `swh:1:rev:d8e4b2a943af8b000a6086bcc108a46124357671` |
+| bpftool            | `v7.6.0-74-g5386cfc`| https://github.com/libbpf/bpftool             | `5386cfcc1361cec24d51c634f76564e0762d2e22` | `swh:1:rev:5386cfcc1361cec24d51c634f76564e0762d2e22` |
 
 Note: `bpftool` includes submodules like `libbpf` which are also pinned within its tree at the revision above.
 
@@ -54,6 +54,9 @@ Note: `bpftool` includes submodules like `libbpf` which are also pinned within i
 *   **Ansible Core**: 2.16+
 *   **Docker Engine**: v25+
 *   **Python**: 3.12+
+*   **ssh**: Installed and configured for local connections.
+*   **rsync**: Required by Ansible for file transfers.
+*   **git**: For cloning repositories.
 *   **Hardware**: Minimum 2 vCPUs, 8GB RAM, and 40GB free disk space (to accommodate the containerized environment and compilation).
 
 ## What does the Demo do?
@@ -120,3 +123,10 @@ To apply RootAsAnsible to your own playbooks:
 *   **Dynamic Analysis**: The learning mode only observes privileges for executed code paths. Conditional tasks skipped during training won't be covered in the policy.
 *   **Policy Refinement**: The generated policy requires manual review and adjustment (e.g., fixing specific user IDs) before enforcement.
 *   **Vendoring**: Task labeling relies on specific assumptions; complex playbooks might require manual adjustments for correct policy generation.
+
+## License
+
+This project and its components are open-source software. To balance freedom and flexibility, we use a dual licensing strategy:
+
+*   **GPLv3**: Applied to the Ansible collection (**RootAsAnsible**), the analysis tool (**gensr**), and the monitoring tool (**capable**). This ensures that the core tooling and any derivatives remain free and open source, promoting community contribution and transparency.
+*   **LGPLv3**: Applied to the core enforcement engine (**RootAsRole**). This less restrictive license allows organizations to develop and link proprietary, business-spercific plugins (e.g., custom authentication or audit modules) without being required to release their internal source code.

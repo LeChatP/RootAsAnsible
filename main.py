@@ -34,6 +34,16 @@ class ColoredFormatter(logging.Formatter):
         formatter = logging.Formatter(prefix + "%(asctime)s - %(levelname)s" + self.reset + " - %(message)s")
         return formatter.format(record)
 
+def setup_logger():
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    if logger.hasHandlers():
+        logger.handlers.clear()
+    
+    handler = logging.StreamHandler()
+    handler.setFormatter(ColoredFormatter())
+    logger.addHandler(handler)
+
 def inject_uuids(playbook_dir):
     '''
     Inject unique UUIDs into become_flags for each task in the playbook.
@@ -243,17 +253,185 @@ def keep_leaf_entries(data: dict[str, str]) -> dict[str, str]:
 
     return {p: data[p] for p in leaf_paths}
 
-def main():
-    # Setup logging with colors
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    # Remove default handlers if any
-    if logger.hasHandlers():
-        logger.handlers.clear()
+def clone_and_reset_if_missing(path, url, commit, recursive=False):
+    if not os.path.exists(path):
+        logging.info(f"📥 Cloning {os.path.basename(path)} repository...")
+        cmd = ["git", "clone"]
+        if recursive:
+            cmd.append("--recursive")
+        cmd.extend([url, path])
+        subprocess.run(cmd, check=True)
+        subprocess.run(["git", "reset", "--hard", commit], cwd=path, check=True)
+
+def prepare_environment(workdir_scenario, build_dir):
+    logging.info("🧪 Starting RootAsAnsible Demonstration...")
     
-    handler = logging.StreamHandler()
-    handler.setFormatter(ColoredFormatter())
-    logger.addHandler(handler)
+    # Define repositories
+    repos = [
+        ("scenario/artifacts/RootAsRole", "https://github.com/LeChatP/RootAsRole", "5dfa43ca6e2551cd961348664a075ca47b1644e5", False),
+        ("scenario/artifacts/RootAsRole-capable", "https://github.com/LeChatP/RootAsRole-capable", "8fb13559dc9698e2f181756aa6aaa2646e2a85f3", False),
+        ("scenario/artifacts/RootAsRole-gensr", "https://github.com/LeChatP/RootAsRole-gensr", "d8e4b2a943af8b000a6086bcc108a46124357671", False),
+        ("scenario/artifacts/bpftool", "https://github.com/libbpf/bpftool", "5386cfcc1361cec24d51c634f76564e0762d2e22", True)
+    ]
+
+    for path, url, commit, recursive in repos:
+        clone_and_reset_if_missing(path, url, commit, recursive)
+    
+    if os.path.exists(build_dir):
+        shutil.rmtree(build_dir)
+
+    logging.info("🚀 Welcome to the RootAsAnsible demonstration!")
+    logging.info("ℹ️  This demo illustrates the MAPE-K fully automated loop.")
+    logging.info("   Goal: Generate a least-privilege policy based on observation of a \"sandbox\".")
+    
+    logging.info("📦 Vendoring 'scenario' directory to 'build'...")
+    shutil.copytree(workdir_scenario, build_dir)
+
+    logging.info("💉 Injecting UUIDs into playbooks for tracking...")
+    inject_uuids(build_dir)
+
+def run_discovery_step(build_dir):
+    logging.info("🏗️  Step 1: Running playbook with 'capable' to generate policy...")
+    logging.info("   (This involves building Docker images and compiling dependencies. Please provide sudo password when prompted.)")
+    vendored_playbook = os.path.join("playbooks", "main.yml")
+
+    # set pwd to build dir
+    os.environ['PWD'] = os.path.abspath(build_dir)
+    os.environ['ANSIBLE_BECOME_METHOD'] = "capable"
+    
+    try:
+        subprocess.run(
+            ["ansible-playbook", vendored_playbook, "-i", "inventory/hosts.yml", "-e", "@vars/vars.yml", "--become-method", "capable", "-K"],
+            check=True,
+            cwd=build_dir
+        )
+        logging.info("🎉 Success! The RootAsRole policy was generated in 'templates/result.json'.")
+    except subprocess.CalledProcessError as e:
+        logging.error(f"❌ Playbook execution failed: {e}")
+        exit(1)
+
+def merge_security_policies(build_dir):
+    base_policy_path = os.path.join(build_dir, "templates", "sr_rootasrole.json")
+    generated_policy_path = os.path.join(build_dir, "templates", "result.json")
+    scenario_policy_path = os.path.join(build_dir, "templates", "sr_scenario.json")        
+    
+    with open(base_policy_path, 'r') as f:
+        base_policy = json.load(f)
+    with open(scenario_policy_path, 'r') as f:
+        scenario_policy = json.load(f)
+    with open(generated_policy_path, 'r') as f:
+        generated_policy = json.load(f)
+    
+    # Function to update names from generated policy
+    grole_map = {r["purpose"]: r for r in generated_policy["roles"]}
+
+    for role in scenario_policy["roles"]:
+        grole = grole_map.get(role["purpose"])
+        if not grole: continue
+        
+        role["name"] = grole["name"]
+        gtask_map = {t["purpose"]: t for t in grole["tasks"]}
+        
+        for task in role["tasks"]:
+            gtask = gtask_map.get(task["purpose"])
+            if gtask:
+                task["name"] = gtask["name"]
+    
+    base_policy["roles"].extend(scenario_policy["roles"])
+    
+    merged_policy_path = os.path.join(build_dir, "templates", "result_sr_rootasrole.json")
+    with open(merged_policy_path, 'w') as f:
+        json.dump(base_policy, f, indent=4)
+
+def modify_mallory_task(build_dir, filename):
+    mallory_playbook_path = os.path.join(build_dir, "roles", "mallory_net_input", "tasks", "main.yml")
+    with open(mallory_playbook_path, 'r') as f:
+        mallory_tasks = yaml.safe_load(f)
+    
+    mallory_tasks[-1] = {
+        'name': 'Make it persistent',
+        'become': True,
+        'changed_when': False,
+        'ansible.builtin.fetch': {
+            'src': '/etc/shadow',
+            'dest': f'{{{{ template_dir }}}}/{filename}',
+            'flat': True
+        },
+        'ignore_errors': True
+    }
+            
+    with open(mallory_playbook_path, 'w') as f:
+        yaml.dump(mallory_tasks, f, default_flow_style=False, sort_keys=False)
+
+def run_ansible_scenario(build_dir, method):
+    os.environ['ANSIBLE_BECOME_METHOD'] = method
+    vendored_scenario = os.path.join("playbooks", "scenario.yml")
+    try:
+        subprocess.run(
+            ["ansible-playbook", vendored_scenario, "-i", "inventory/hosts.yml", "-e", "@vars/vars.yml", "--become-method", method],
+            check=True,
+            cwd=build_dir
+        )
+        return True
+    except subprocess.CalledProcessError as e:
+        logging.error(f"❌ Playbook execution failed: {e}")
+        return False
+
+def run_enforcement_steps(build_dir):
+    os.environ['PWD'] = os.path.abspath(build_dir)
+    os.environ['ANSIBLE_TIMEOUT'] = "120"
+    
+    logging.info("🔍  Step 2: Policy Review (Simulated).")
+    merge_security_policies(build_dir)
+    
+    logging.info("🛡️  Step 3: Pushing Policy to Host. (Plan)")
+    enforce_playbook = os.path.join("playbooks", "enforce_rar_policy.yml")
+    try:
+        subprocess.run(
+            ["ansible-playbook", enforce_playbook, "-i", "inventory/hosts.yml", "-e", "@vars/vars.yml"],
+            check=True,
+            cwd=build_dir
+        )
+    except subprocess.CalledProcessError as e:
+        logging.error(f"❌ Playbook execution failed: {e}")
+        exit(1)
+
+    logging.info("🏴‍☠️ Let's modify mallory role to leak passwords file to demonstrate enforcement...")
+    modify_mallory_task(build_dir, "sudo_shadow")
+
+    logging.info("🎬 Step 4: Let's start scenario with sudo first, to show that the \"\"attack\"\" is successful")
+    logging.info("   Re-running scenario.")
+    
+    if run_ansible_scenario(build_dir, "sudo"):
+        if os.path.exists(os.path.join(build_dir, "templates", "sudo_shadow")):
+            logging.info(f"⚠️  Security Breach! Mallory was able to fetch /etc/shadow using sudo! The file '{os.path.join(build_dir, 'templates', 'sudo_shadow')}' was created!!!")
+        else:
+            logging.error("❌ Unexpected: Mallory could not fetch /etc/shadow even with sudo!")
+    
+    logging.info("Let's modify mallory role just for using 'dosr_shadow' file name")
+    modify_mallory_task(build_dir, "dosr_shadow")
+    
+    logging.info("🔒 Now, re-running playbook with secured 'dosr' policy")
+    if run_ansible_scenario(build_dir, "dosr"):
+        if os.path.exists(os.path.join(build_dir, "templates", "dosr_shadow")):
+            logging.error(f"❌ Security Breach! Mallory was able to fetch /etc/shadow even with dosr! The file '{os.path.join(build_dir, 'templates', 'dosr_shadow')}' was created!!!")
+        else:
+            logging.info("✅ Enforcement Successful! Mallory could NOT fetch /etc/shadow with dosr as expected.")
+
+    logging.info("✅ Enforcement Demonstration completed successfully! ✅")
+    logging.info("🎉 Congratulations! You have witnessed the full MAPE-K loop with RootAsAnsible.")
+    
+    logging.info("So let's recap what happened:")
+    logging.info("1️⃣  We started with a playbook running in a sandbox environment using 'capable' to observe required privileges.")
+    logging.info("2️⃣  From these observations, we generated a least-privilege RootAsRole policy.")
+    logging.info("3️⃣  We reviewed and pushed this policy to the host.")
+    logging.info(f"4️⃣  We ran the scenario using sudo first to demonstrate the security problem, the attack was successful as the file '{os.path.join(build_dir, 'templates', 'sudo_shadow')}' is created with passwords in it.")
+    logging.info(f"5️⃣  Finally, we re-ran the same scenario using the RootAsRole policy with the 'dosr' tool and by the task failure (and the '{os.path.join(build_dir, 'templates', 'dosr_shadow')}' file not present), we confirmed that the security breach was prevented.")
+    logging.info("🏁 This completes the demonstration of RootAsAnsible's MAPE-K loop in action!")
+    logging.info("Thank you for testing!")
+
+def main():
+    setup_logger()
 
     # Argument parsing
     parser = argparse.ArgumentParser(description="RootAsAnsible Demonstration Script")
@@ -265,186 +443,11 @@ def main():
     build_dir = "build"
     
     if args.discover:
-        if os.path.exists(build_dir):
-            shutil.rmtree(build_dir)
-        
-        logging.info("🚀 Welcome to the RootAsAnsible demonstration!")
-        logging.info("ℹ️  This demo illustrates the MAPE-K fully automated loop.")
-        logging.info("   Goal: Generate a least-privilege policy based on observation of a \"sandbox\".")
-        
-        logging.info("📦 Vendoring 'scenario' directory to 'build'...")
-        # Copy content of scenario to build/
-        shutil.copytree(workdir_scenario, build_dir)
-
-        logging.info("💉 Injecting UUIDs into playbooks for tracking...")
-        inject_uuids(build_dir)
-        
-        logging.info("🏗️  Step 1: Running playbook with 'capable' to generate policy...")
-        logging.info("   (This involves building Docker images and compiling dependencies. Please provide sudo password when prompted.)")
-        vendored_playbook = os.path.join("playbooks", "main.yml")
-
-        # set pwd to build dir
-        os.environ['PWD'] = os.path.abspath(build_dir)
-        os.environ['ANSIBLE_BECOME_METHOD'] = "capable"
-        
-        try:
-            subprocess.run(
-                ["ansible-playbook", vendored_playbook, "-i", "inventory/hosts.yml", "-e", "@vars/vars.yml", "--become-method", "capable", "-K"],
-                check=True,
-                cwd=build_dir
-            )
-        except subprocess.CalledProcessError as e:
-            logging.error(f"❌ Playbook execution failed: {e}")
-            return
-        logging.info("🎉 Success! The RootAsRole policy was generated in 'templates/result.json'.")
+        prepare_environment(workdir_scenario, build_dir)
+        run_discovery_step(build_dir)
     
-    ## STEP 2 & 3
     if args.enforce:
-        # Ensure environment is set up if running separately
-        os.environ['PWD'] = os.path.abspath(build_dir)
-        os.environ['ANSIBLE_TIMEOUT'] = "120"
-        vendored_playbook = os.path.join("playbooks", "main.yml")
-        vendored_scenario = os.path.join("playbooks", "scenario.yml")
-
-        logging.info("🔍  Step 2: Policy Review (Simulated).")
-        # Merge policies
-        base_policy_path = os.path.join(build_dir, "templates", "sr_rootasrole.json")
-        generated_policy_path = os.path.join(build_dir, "templates", "result.json")
-        scenario_policy_path = os.path.join(build_dir, "templates", "sr_scenario.json")        
-        # first we take the sr_scenatio.json as base
-        with open(base_policy_path, 'r') as f:
-            base_policy = json.load(f)
-        with open(scenario_policy_path, 'r') as f:
-            scenario_policy = json.load(f)
-        with open(generated_policy_path, 'r') as f:
-            generated_policy = json.load(f)
-        ## find matching task based on purpose and push the name from generated to base
-        grole_map = {r["purpose"]: r for r in generated_policy["roles"]}
-
-        for role in scenario_policy["roles"]:
-            grole = grole_map.get(role["purpose"])
-            if grole:
-                role["name"] = grole["name"]
-            else:
-                continue
-            
-            # Create task lookup map for current matched role
-            gtask_map = {t["purpose"]: t for t in grole["tasks"]}
-            
-            for task in role["tasks"]:
-                gtask = gtask_map.get(task["purpose"])
-                if gtask:
-                    task["name"] = gtask["name"]
-        
-        ## now we merge scenario roles to base roles 
-        base_policy["roles"].extend(scenario_policy["roles"])
-        
-        ## finally we write the merged policy to the expected location
-        merged_policy_path = os.path.join(build_dir, "templates", "result_sr_rootasrole.json")
-        with open(merged_policy_path, 'w') as f:
-            json.dump(base_policy, f, indent=4)
-        
-        logging.info("🛡️  Step 3: Pushing Policy to Host. (Plan)")
-        
-        enforce_playbook = os.path.join("playbooks", "enforce_rar_policy.yml")
-        
-        try:
-            subprocess.run(
-                ["ansible-playbook", enforce_playbook, "-i", "inventory/hosts.yml", "-e", "@vars/vars.yml"],
-                check=True,
-                cwd=build_dir
-            )
-        except subprocess.CalledProcessError as e:
-            logging.error(f"❌ Playbook execution failed: {e}")
-            return
-        
-        logging.info("🏴‍☠️ Let's modify mallory role to leak passwords file to demonstrate enforcement...")
-        mallory_playbook_path = os.path.join(build_dir, "roles", "mallory_net_input", "tasks", "main.yml")
-        
-        with open(mallory_playbook_path, 'r') as f:
-            mallory_tasks = yaml.safe_load(f)
-
-        
-        mallory_tasks[-1] = {
-            'name': 'Make it persistent',
-            'become': True,
-            'changed_when': False,
-            'ansible.builtin.fetch': {
-                'src': '/etc/shadow',
-                'dest': '{{ template_dir }}/sudo_shadow',
-                'flat': True
-            },
-            'ignore_errors': True
-        }
-                
-        
-        with open(mallory_playbook_path, 'w') as f:
-            yaml.dump(mallory_tasks, f, default_flow_style=False, sort_keys=False)
-        
-        ## STEP 4
-        logging.info("🎬 Step 4: Let's start scenario with sudo first, to show that the \"\"attack\"\" is successful")
-        logging.info("   Re-running scenario.")
-        
-        os.environ['ANSIBLE_BECOME_METHOD'] = "sudo"
-        
-        try:
-            subprocess.run(
-                ["ansible-playbook", vendored_scenario, "-i", "inventory/hosts.yml", "-e", "@vars/vars.yml", "--become-method", "sudo"],
-                check=True,
-                cwd=build_dir
-            )
-        except subprocess.CalledProcessError as e:
-            logging.error(f"❌ Playbook execution failed: {e}")
-            return
-        
-        if os.path.exists(os.path.join(build_dir, "templates", "sudo_shadow")):
-            logging.info(f"⚠️  Security Breach! Mallory was able to fetch /etc/shadow using sudo! The file '{os.path.join(build_dir, "templates", "sudo_shadow")}' was created!!!")
-        else:
-            logging.error("❌ Unexpected: Mallory could not fetch /etc/shadow even with sudo!")
-        
-        logging.info("Let's modify mallory role just for using 'dosr_shadow' file name")
-        mallory_tasks[-1] = {
-            'name': 'Make it persistent',
-            'become': True,
-            'changed_when': False,
-            'ansible.builtin.fetch': {
-                'src': '/etc/shadow',
-                'dest': '{{ template_dir }}/dosr_shadow',
-                'flat': True
-            },
-            'ignore_errors': True
-        }
-        
-        with open(mallory_playbook_path, 'w') as f:
-            yaml.dump(mallory_tasks, f, default_flow_style=False, sort_keys=False)
-        
-        logging.info("🔒 Now, re-running playbook with secured 'dosr' policy")
-        os.environ['ANSIBLE_BECOME_METHOD'] = "dosr"
-        try:
-            subprocess.run(
-                ["ansible-playbook", vendored_scenario, "-i", "inventory/hosts.yml", "-e", "@vars/vars.yml", "--become-method", "dosr"],
-                check=True,
-                cwd=build_dir
-            )
-        except subprocess.CalledProcessError as e:
-            logging.error(f"❌ Playbook execution failed: {e}")
-            return
-        
-        if os.path.exists(os.path.join(build_dir, "templates", "dosr_shadow")):
-            logging.error(f"❌ Security Breach! Mallory was able to fetch /etc/shadow even with dosr! The file '{os.path.join(build_dir, "templates", "dosr_shadow")}' was created!!!")
-        else:
-            logging.info("✅ Enforcement Successful! Mallory could NOT fetch /etc/shadow with dosr as expected.")
-        
-        logging.info("✅ Enforcement Demonstration completed successfully! ✅")
-        logging.info("🎉 Congratulations! You have witnessed the full MAPE-K loop with RootAsAnsible.")
-        logging.info("So let's recap what happened:")
-        logging.info("1️⃣  We started with a playbook running in a sandbox environment using 'capable' to observe required privileges.")
-        logging.info("2️⃣  From these observations, we generated a least-privilege RootAsRole policy.")
-        logging.info("3️⃣  We reviewed and pushed this policy to the host.")
-        logging.info(f"4️⃣  We ran the scenario using sudo first to demonstrate the security problem, the attack was successful as the file '{os.path.join(build_dir, "templates", "sudo_shadow")}' is created with passwords in it.")
-        logging.info(f"5️⃣  Finally, we re-ran the same scenario using the RootAsRole policy with the 'dosr' tool and by the task failure (and the '{os.path.join(build_dir, "templates", "dosr_shadow")}' file not present), we confirmed that the security breach was prevented.")
-        logging.info("🏁 This completes the demonstration of RootAsAnsible's MAPE-K loop in action!")
-        logging.info("Thank you for testing!")
+        run_enforcement_steps(build_dir)
     
     if not args.discover and not args.enforce:
         logging.info("No steps specified. Use --discover and/or --enforce to run the demonstration.")

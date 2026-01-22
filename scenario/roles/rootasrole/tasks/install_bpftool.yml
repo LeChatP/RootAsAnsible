@@ -6,15 +6,12 @@
   failed_when: false
   changed_when: false
 
-- name: Git clone bpftool
+- name: Copy bpftool from artifacts
   when: bpftool_installed.rc != 0
-  ansible.builtin.git:
-    repo: 'https://github.com/libbpf/bpftool.git'
+  ansible.posix.synchronize:
+    src: "{{ role_path }}/../../artifacts/bpftool/"
     dest: '/tmp/bpftool'
-    clone: true
-    update: true
-    version: "main"
-    recursive: true
+  become: false
 
 - name: Make bpftool
   when: bpftool_installed.rc != 0

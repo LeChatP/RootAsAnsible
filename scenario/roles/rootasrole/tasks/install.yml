@@ -8,16 +8,12 @@
   failed_when: false
   changed_when: false
 
-- name: Clone RootAsRole repository
+- name: Copy RootAsRole repository from artifacts
   when: sr.rc != 0
-  ansible.builtin.git:
-    repo: 'https://github.com/LeChatP/RootAsRole.git'
+  ansible.posix.synchronize:
+    src: "{{ role_path }}/../../artifacts/RootAsRole/"
     dest: '/tmp/RootAsRole'
-    clone: true
-    update: true
-    version: "{{ rootasrole_branch }}"
   become: false
-  register: git
 
 - name: Performing install xtask
   when: sr.rc != 0
