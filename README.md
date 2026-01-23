@@ -77,12 +77,14 @@ The demo is following the MAPE-K loop:
    ```
 2. Start the demo:
    ```bash
-   python3 main.py --discover --enforce
+   python3 main.py --clean --discover --enforce
    ```
 
-   The script accepts two optional flags:
+   The script accepts optional flags:
+   *   `--clean`: Cleans up any previous demo artifacts before running. Can be used after the demo to cleanup your system.
    *   `--discover`: Runs Phase 1 (Privilege Discovery).
    *   `--enforce`: Runs Phase 2 (Least Privilege Enforcement).
+
    
    If both flags are provided, the script executes the full workflow sequentially. Note: the enforcement phase depends on the discovery phase to setup the environment correctly.
 
