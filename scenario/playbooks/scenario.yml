@@ -53,8 +53,23 @@
   hosts: localhost
   become: false
   tasks:
+    - name: Docker exec test Apache2
+      community.docker.docker_container_exec: # Docker seems to have issues with binding opening ports with ansible...
+        container: rootasansiblecontainer
+        command: service apache2 restart
+      register: apache2_status
+      failed_when: "'done.' not in apache2_status.stdout"
+      become: true
+      become_method: ansible.builtin.sudo
+    - name: Wait for Apache port
+      ansible.builtin.wait_for:
+        host: "{{ webserver_ip }}"
+        port: 80
+        state: started
+        delay: 2
+        timeout: 60
     - name: Test Apache2
       ansible.builtin.uri:
-        url: "http://{{ ansible_host }}/index.html"
+        url: "http://{{ webserver_ip }}/index.html"
         status_code: 200
   ignore_errors: true

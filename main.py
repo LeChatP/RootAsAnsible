@@ -430,6 +430,29 @@ def run_enforcement_steps(build_dir):
     logging.info("🏁 This completes the demonstration of RootAsAnsible's MAPE-K loop in action!")
     logging.info("Thank you for testing!")
 
+def clean_environment(build_dir):
+    logging.info("🧹 Cleaning up environment...")
+
+    # Stop and remove container
+    logging.info("   Stopping and removing 'rootasansiblecontainer' container...")
+    subprocess.run(["docker", "stop", "rootasansiblecontainer"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["docker", "rm", "rootasansiblecontainer"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    # Remove image
+    logging.info("   Removing 'rootasansible' image...")
+    subprocess.run(["docker", "rmi", "rootasansible"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    # Remove network
+    logging.info("   Removing 'RootAsAnsibleNetwork' network...")
+    subprocess.run(["docker", "network", "rm", "RootAsAnsibleNetwork"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    
+    # Remove build directory
+    if os.path.exists(build_dir):
+        logging.info(f"   Removing '{build_dir}' directory...")
+        shutil.rmtree(build_dir)
+    
+    logging.info("✨ Cleanup completed successfully!")
+
 def main():
     setup_logger()
 
@@ -437,11 +460,15 @@ def main():
     parser = argparse.ArgumentParser(description="RootAsAnsible Demonstration Script")
     parser.add_argument('--discover', action='store_true', help="Run Step 1: Generation (capable)")
     parser.add_argument('--enforce', action='store_true', help="Run Step 2-4: Policy Review & Enforcement (dosr)")
+    parser.add_argument('--clean', action='store_true', help="Clean up environment (containers, images, network, build dir)")
     args = parser.parse_args()
 
     workdir_scenario = "scenario"
     build_dir = "build"
     
+    if args.clean:
+        clean_environment(build_dir)
+
     if args.discover:
         prepare_environment(workdir_scenario, build_dir)
         run_discovery_step(build_dir)
@@ -449,8 +476,8 @@ def main():
     if args.enforce:
         run_enforcement_steps(build_dir)
     
-    if not args.discover and not args.enforce:
-        logging.info("No steps specified. Use --discover and/or --enforce to run the demonstration.")
+    if not args.discover and not args.enforce and not args.clean:
+        logging.info("No steps specified. Use --discover, --enforce and/or --clean to run the demonstration.")
 
 if __name__ == "__main__":
     main()
