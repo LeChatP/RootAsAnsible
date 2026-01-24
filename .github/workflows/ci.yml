@@ -2,9 +2,9 @@ name: RootAsAnsible CI
 
 on:
   push:
-    branches: [ ci ]
+    branches: [ main ]
   pull_request:
-    branches: [ ci ]
+    branches: [ main ]
 
 jobs:
   rootasansible-demo:
