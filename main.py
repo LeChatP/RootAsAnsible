@@ -299,9 +299,13 @@ def run_discovery_step(build_dir):
     os.environ['PWD'] = os.path.abspath(build_dir)
     os.environ['ANSIBLE_BECOME_METHOD'] = "capable"
     
+    cmd = ["ansible-playbook", vendored_playbook, "-i", "inventory/hosts.yml", "-e", "@vars/vars.yml", "--become-method", "capable"]
+    if not os.environ.get("GITHUB_ACTIONS") and not os.environ.get("CI"):
+        cmd.append("-K")
+
     try:
         subprocess.run(
-            ["ansible-playbook", vendored_playbook, "-i", "inventory/hosts.yml", "-e", "@vars/vars.yml", "--become-method", "capable", "-K"],
+            cmd,
             check=True,
             cwd=build_dir
         )
