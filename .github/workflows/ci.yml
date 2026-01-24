@@ -1,0 +1,28 @@
+name: RootAsAnsible CI
+
+on:
+  push:
+    branches: [ ci ]
+  pull_request:
+    branches: [ ci ]
+
+jobs:
+  rootasansible-demo:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install ansible pyyaml requests docker
+        ansible-galaxy collection install community.docker
+
+    - name: Run RootAsAnsible Demo
+      run: |
+        sudo --preserve-env=PATH python3 main.py --clean --discover --enforce
