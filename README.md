@@ -1,5 +1,7 @@
 # RootAsAnsible
 
+![Demo](https://github.com/LeChatP/RootAsAnsible/actions/workflows/ci.yml/badge.svg)
+
 **Artifact Submission for Prix Artefact GDR Sécurité 2026**
 
 This project demonstrates the integration of **RootAsRole** with Ansible, enabling **Least Privilege** management and enforcement for Ansible playbooks.

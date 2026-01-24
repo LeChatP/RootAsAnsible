@@ -1,4 +1,4 @@
-name: RootAsAnsible CI
+name: RootAsAnsible Demo
 
 on:
   push:
